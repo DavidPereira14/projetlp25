@@ -15,6 +15,7 @@ unsigned int hash_md5(unsigned char *md5) {
     }
     return hash % HASH_TABLE_SIZE;
 }
+//blusk le goat
 
 // Fonction pour calculer le MD5 d'un chunk
 void compute_md5(void *data, size_t len, unsigned char *md5_out) {
