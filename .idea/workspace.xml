@@ -19,7 +19,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/src/backup_manager.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/deduplication.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/deduplication.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -82,7 +82,7 @@
       <updated>1733222501147</updated>
       <workItem from="1733222502851" duration="366000" />
       <workItem from="1733225551893" duration="17000" />
-      <workItem from="1733303705586" duration="25000" />
+      <workItem from="1733303705586" duration="273000" />
     </task>
     <servers />
   </component>
