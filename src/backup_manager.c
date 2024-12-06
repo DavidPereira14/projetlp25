@@ -14,7 +14,7 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     *          backup_dir est le chemin vers le répertoire de sauvegarde
     */
 }
-
+//fdsgsqsdssgsqgsgsgsgsgsqgzqgzqgezg'zgz
 // Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     /*
