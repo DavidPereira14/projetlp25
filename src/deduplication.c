@@ -18,7 +18,7 @@ unsigned int hash_md5(unsigned char *md5) {
 
 // Fonction pour calculer le MD5 d'un chunk
 void compute_md5(void *data, size_t len, unsigned char *md5_out) {
-
+    MD5(data, len, md5_out);
 }
 
 // Fonction permettant de chercher un MD5 dans la table de hachage
@@ -62,4 +62,5 @@ void undeduplicate_file(FILE *file, Chunk **chunks, int *chunk_count) {
     *           chunks représente le tableau de chunk qui contiendra les chunks restauré depuis filename
     *           chunk_count est un compteur du nombre de chunk restauré depuis le fichier filename
     */
+
 }
