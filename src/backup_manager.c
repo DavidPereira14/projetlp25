@@ -41,3 +41,8 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     *          restore_dir est le répertoire de destination de la restauration
     */
 }
+
+// Fonction permettant de lister les différentes sauvegardes présentes dans la destination
+void list_backups(const char *backup_dir){
+
+}
