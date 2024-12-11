@@ -105,17 +105,47 @@ int are_files_different(const char *file1, const char *file2) {
         return -1; // Fichier seulement dans le dossier 2
     }
 
-    // Cas où les deux fichiers n'existent pas
-    if (!f1 && !f2) {
-        return -2; // Aucun des deux fichiers n'existe
+    // Cas où les deux fichiers existent
+    if (f1 && f2) {
+        return 2; // Fichier dans les 2 dossiers
     }
 }
+
+void copier_fichier(const char *source, const char *destination) {
+    FILE *src = fopen(source, "rb");  // Ouvre le fichier source en mode binaire
+    if (src == NULL) {
+        perror("Erreur d'ouverture du fichier source");
+        return;
+    }
+
+    FILE *dest = fopen(destination, "wb");  // Ouvre le fichier destination en mode binaire
+    if (dest == NULL) {
+        perror("Erreur d'ouverture du fichier destination");
+        fclose(src);
+        return;
+    }
+
+    char buffer[4096];  // Buffer pour lire et écrire des données
+    size_t bytes_read;
+
+    // Lire et copier le contenu du fichier source dans le fichier destination
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), src)) > 0) {
+        fwrite(buffer, 1, bytes_read, dest);
+    }
+
+    printf("Le fichier '%s' a été copié vers '%s'.\n", source, destination);
+
+    fclose(src);  // Ferme le fichier source
+    fclose(dest);  // Ferme le fichier destination
+}
+
+
 
 int enregistrement(const char *src_dir, const char *dest_dir){
     DIR *src = opendir(src_dir);
     DIR *dest = opendir(dest_dir);
     if (!dest) {
-        perror("Erreur d'ouverture du répertoire destination");
+        printf("Erreur d'ouverture du répertoire destination");
         return -1;
     }
     if (!src){
@@ -129,7 +159,41 @@ int enregistrement(const char *src_dir, const char *dest_dir){
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-        
+        char src_path[1024], dest_path[1024];
+        snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
+
+        if (stat(src_path, &src_stat) == -1) {
+            printf("Erreur lors de la récupération des informations source");
+            continue;
+        }
+        if (S_ISDIR(src_stat.st_mode)) {
+            // Gestion des dossiers
+            if (stat(dest_path, &dest_stat) == -1) {
+                // Le dossier n'existe pas dans la destination, on le crée
+                if (mkdir(dest_path, 0755) == -1) {
+                    printf("Erreur lors de la création du dossier destination");
+                    continue;
+                }
+            }
+            // Synchroniser récursivement
+            enregistrement(src_path, dest_path);
+        } else if (S_ISREG(src_stat.st_mode)) {
+            // Gestion des fichiers
+            int diff = are_files_different(src_path, dest_path);
+            switch (diff) {
+                case -1:
+                    remove(dest_path);
+                    break;
+                case 1:
+                    copier_fichier(src_path,dest_path);
+                    break;
+                case 2:
+                    //appeler fonction toto
+                    break;
+            }
+        }
+
     }
 
 }
