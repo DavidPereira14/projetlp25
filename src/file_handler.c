@@ -77,7 +77,48 @@ void update_backup_log(const char *logfile, log_t *logs){
   * @param: logfile - le chemin vers le fichier .backup_log
   *         logs - qui est la liste de toutes les lignes du fichier .backup_log sauvegardée dans une structure log_t
   */
+    // Ouvre le fichier .backup_log en mode lecture/écriture
+    FILE *file = fopen(logfile, "r+");
+    if (!file) {
+        perror("Erreur lors de l'ouverture du fichier");
+        return;
+    }
 
+    // Parcours la liste log_t et met à jour chaque élément du fichier
+    log_element *current = logs->head;
+    char line[1024];  // Buffer pour lire chaque ligne du fichier
+    long position;  // Pour stocker la position de chaque ligne
+
+    while (current) {
+        // Remet le curseur au début du fichier pour commencer à lire ligne par ligne
+        fseek(file, 0, SEEK_SET);
+
+        // Parcourt chaque ligne du fichier pour trouver celle à modifier
+        while (fgets(line, sizeof(line), file)) {
+            position = ftell(file);  // Position actuelle dans le fichier
+
+            // Comparer l'élément actuel avec la ligne du fichier
+            char *path_in_file = strtok(line, ";");
+
+            // Si le chemin correspond, on remplace cette ligne
+            if (path_in_file && strcmp(path_in_file, current->path) == 0) {
+                // Déplace le curseur à la position de la ligne à modifier
+                fseek(file, position - strlen(line), SEEK_SET);
+
+                // Réécris la ligne avec les nouvelles informations
+                fprintf(file, "%s;%s;%s", current->path, current->date, current->md5);
+
+                // Avance d'un retour à la ligne
+                fseek(file, position + strlen(line), SEEK_SET);
+                break;
+            }
+        }
+
+        // Passe à l'élément suivant dans la liste chaînée
+        current = current->next;
+    }
+
+    fclose(file);  // Ferme le fichier après les modifications
 }
 
 void write_log_element(log_element *elt, FILE *logfile){
@@ -85,11 +126,13 @@ void write_log_element(log_element *elt, FILE *logfile){
    * @param: elt - un élément log à écrire sur une ligne
    *         logfile - le chemin du fichier .backup_log
    */
-  FILE *f = fopen(logfile, "w");
+  FILE *f = fopen(logfile, "a");
   if (f == NULL){
     perror("Erreur lors de l'ouverture du fichier");
     }
-
+    fseek(logfile, 0, SEEK_END);
+    fprintf(f, "%s;%s;%s", elt->path, elt->date, elt->md5);
+    fclose(f);
 }
 
 void list_files(const char *path){
