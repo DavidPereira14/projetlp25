@@ -8,44 +8,6 @@
 #include <time.h>
 #include <sys/stat.h>
 
-// Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
-void create_backup(const char *source_dir, const char *backup_dir) {
-    /* @param: source_dir est le chemin vers le répertoire à sauvegarder
-    *          backup_dir est le chemin vers le répertoire de sauvegarde
-    */
-    DIR *src;
-    struct dirent *entry;
-    struct stat src_stat, dest_stat;
-    if (check_directory(source_dir)==-1){
-        printf("Erreur : vérifier le repertoire source (existance,permission)");
-        return;
-    }
-    if (check_directory(backup_dir)==-1){
-        printf("Erreur : vérifier le repertoire backup (existance,permission)");
-        return;
-    }
-    // Obtenir l'horodatage pour le répertoire de sauvegarde
-    char timestamp[32];
-    get_timestamp(timestamp, sizeof(timestamp));
-    char backup_path[1024];
-    snprintf(backup_path, sizeof(backup_path), "%s/%s", backup_dir, timestamp);
-    char *last_backup_name = find_last_backup(backup_dir);
-    if (last_backup_name){
-        char last_backup_path[1024];
-        snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
-        printf("Copie complète depuis : %s\n", last_backup_path);
-        mkdir(backup_path, 0755);
-        restore_backup(last_backup_path, backup_path);
-        free(last_backup_name);
-    }else{
-        // Pas de sauvegarde existante, créer un répertoire vide
-        mkdir(backup_path, 0755);
-    }
-    //
-    closedir(src);
-    printf("Sauvegarde incrémentale terminée : %s\n", backup_path);
-}
-
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
     struct stat path_stat;
@@ -125,6 +87,90 @@ char *find_last_backup(const char *dest_dir) {
 
     closedir(dir);
     return last_backup;
+}
+
+int are_files_different(const char *file1, const char *file2) {
+    FILE *f1 = fopen(file1, "rb");
+    FILE *f2 = fopen(file2, "rb");
+
+    // Cas où le fichier n'existe que dans le dossier 1
+    if (f1 && !f2) {
+        fclose(f1);
+        return 1; // Fichier seulement dans le dossier 1
+    }
+
+    // Cas où le fichier n'existe que dans le dossier 2
+    if (!f1 && f2) {
+        fclose(f2);
+        return -1; // Fichier seulement dans le dossier 2
+    }
+
+    // Cas où les deux fichiers n'existent pas
+    if (!f1 && !f2) {
+        return -2; // Aucun des deux fichiers n'existe
+    }
+}
+
+int enregistrement(const char *src_dir, const char *dest_dir){
+    DIR *src = opendir(src_dir);
+    DIR *dest = opendir(dest_dir);
+    if (!dest) {
+        perror("Erreur d'ouverture du répertoire destination");
+        return -1;
+    }
+    if (!src){
+        printf("Erreur : lors de l'ouverture du répertoire source");
+        return -1;
+    }
+    struct dirent *entry;
+    struct stat src_stat;
+    struct stat dest_stat;
+    while ((entry = readdir(src)) != NULL){
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        
+    }
+
+}
+
+
+
+// Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
+void create_backup(const char *source_dir, const char *backup_dir) {
+    DIR *src;
+    struct dirent *entry;
+    struct stat src_stat, dest_stat;
+    if (check_directory(source_dir)==-1){
+        printf("Erreur : vérifier le repertoire source (existance,permission)");
+        return;
+    }
+    if (check_directory(backup_dir)==-1){
+        printf("Erreur : vérifier le repertoire backup (existance,permission)");
+        return;
+    }
+    // Obtenir l'horodatage pour le répertoire de sauvegarde
+    char timestamp[32];
+    get_timestamp(timestamp, sizeof(timestamp));
+    char backup_path[1024];
+    snprintf(backup_path, sizeof(backup_path), "%s/%s", backup_dir, timestamp);
+    char *last_backup_name = find_last_backup(backup_dir);
+    if (last_backup_name){
+        char last_backup_path[1024];
+        snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
+        printf("Copie complète depuis : %s\n", last_backup_path);
+        mkdir(backup_path, 0755);
+        restore_backup(last_backup_path, backup_path);
+        free(last_backup_name);
+    }else{
+        // Pas de sauvegarde existante, créer un répertoire vide
+        mkdir(backup_path, 0755);
+        fopen(strcat(backup_path,"/.backup_log"),"w");
+        // copie repertoire
+    }
+    //
+    closedir(src);
+    printf("Sauvegarde incrémentale terminée : %s\n", backup_path);
 }
 
 // Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
