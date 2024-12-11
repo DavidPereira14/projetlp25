@@ -18,9 +18,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -28,11 +26,6 @@
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
-  </component>
-  <component name="ExternalProjectsData">
-    <projectState path="$PROJECT_DIR$">
-      <ProjectState />
-    </projectState>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -73,7 +66,6 @@
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/davidpereira/Documents/TC3/LP25/projetlp25&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -105,9 +97,9 @@
       <workItem from="1733478584565" duration="33000" />
       <workItem from="1733478627468" duration="282000" />
       <workItem from="1733478921129" duration="3068000" />
-      <workItem from="1733825880430" duration="436000" />
-      <workItem from="1733826754349" duration="1070000" />
-      <workItem from="1733843252518" duration="14000" />
+      <workItem from="1733483261575" duration="3000" />
+      <workItem from="1733487150320" duration="27000" />
+      <workItem from="1733822273640" duration="1197000" />
     </task>
     <servers />
   </component>
