@@ -3,6 +3,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <openssl/md5.h>
 
 
 // Structure pour l'élément de log
