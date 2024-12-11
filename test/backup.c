@@ -170,3 +170,45 @@ void list_files(const char *path){
     perror("Erreur lors de la fermeture du répertoire");
   }
 }
+
+int main() {
+    const char *logfile = "backup_log.txt";
+
+    // Lire les logs existants
+    log_t logs = read_backup_log(logfile);
+    printf("Logs lus :\n");
+    log_element *current = logs.head;
+    while (current) {
+        printf("Chemin : %s, Date : %s, MD5 : ", current->path, current->date);
+        for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+            printf("%02x", current->md5[i]);
+        }
+        printf("\n");
+        current = current->next;
+    }
+
+    // Ajouter un nouvel élément
+    log_element new_log = {
+        .path = strdup("/home/user/newfile.txt"),
+        .date = strdup("2024-12-11 10:00:00"),
+        .md5 = {0x1f, 0x6d, 0x3a, 0x5e, 0x2f, 0x7a, 0x9e, 0xa3, 0x4b, 0x9f, 0x6c, 0xa8, 0x11, 0x21, 0x1c, 0x70}
+    };
+    write_log_element(&new_log, logfile);
+    printf("Nouveau log ajouté.\n");
+
+    // Mise à jour des logs existants
+    printf("Mise à jour des logs...\n");
+    update_backup_log(logfile, &logs);
+
+    // Libération de la mémoire allouée
+    current = logs.head;
+    while (current) {
+        log_element *temp = current;
+        current = current->next;
+        free(temp->path);
+        free(temp->date);
+        free(temp);
+    }
+
+    return 0;
+}
