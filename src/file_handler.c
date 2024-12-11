@@ -71,54 +71,68 @@ log_t read_backup_log(const char *logfile){
     fclose(file);
     return log_list;  // Retourne la liste chaînée remplie
 }
+
 // Fonction permettant de mettre à jour une ligne du fichier .backup_log
-void update_backup_log(const char *logfile, log_t *logs){
-  /* Implémenter la logique de modification d'une ligne du fichier ".bakcup_log"
-  * @param: logfile - le chemin vers le fichier .backup_log
-  *         logs - qui est la liste de toutes les lignes du fichier .backup_log sauvegardée dans une structure log_t
-  */
-    // Ouvre le fichier .backup_log en mode lecture/écriture
-    FILE *file = fopen(logfile, "r+");
+void update_backup_log(const char *logfile, log_t *logs) {
+    /* Implémenter la logique de modification d'une ligne du fichier ".backup_log"
+     * @param: logfile - le chemin vers le fichier .backup_log
+     *         logs - la liste de toutes les lignes du fichier .backup_log sauvegardée dans une structure log_t
+     */
+
+    // Ouvre le fichier .backup_log en mode lecture
+    FILE *file = fopen(logfile, "r");
     if (!file) {
         perror("Erreur lors de l'ouverture du fichier");
         return;
     }
 
-    // Parcours la liste log_t et met à jour chaque élément du fichier
-    log_element *current = logs->head;
-    char line[1024];  // Buffer pour lire chaque ligne du fichier
-    long position;  // Pour stocker la position de chaque ligne
+    // Stocke toutes les lignes valides
+    char *lines[1024];  // Tableau pour stocker les lignes du fichier
+    int line_count = 0;
+    char line[1024];     // Buffer pour lire chaque ligne du fichier
+    long position;       // Pour stocker la position de chaque ligne
 
-    while (current) {
-        // Remet le curseur au début du fichier pour commencer à lire ligne par ligne
-        fseek(file, 0, SEEK_SET);
+    // Parcours du fichier et stockage des lignes valides
+    while (fgets(line, sizeof(line), file)) {
+        position = ftell(file);  // Position actuelle dans le fichier
 
-        // Parcourt chaque ligne du fichier pour trouver celle à modifier
-        while (fgets(line, sizeof(line), file)) {
-            position = ftell(file);  // Position actuelle dans le fichier
+        // Extraire le chemin du fichier de chaque ligne
+        char *path_in_file = strtok(line, ";");
 
-            // Comparer l'élément actuel avec la ligne du fichier
-            char *path_in_file = strtok(line, ";");
-
-            // Si le chemin correspond, on remplace cette ligne
-            if (path_in_file && strcmp(path_in_file, current->path) == 0) {
-                // Déplace le curseur à la position de la ligne à modifier
-                fseek(file, position - strlen(line), SEEK_SET);
-
-                // Réécris la ligne avec les nouvelles informations
-                fprintf(file, "%s;%s;%s", current->path, current->date, current->md5);
-
-                // Avance d'un retour à la ligne
-                fseek(file, position + strlen(line), SEEK_SET);
-                break;
+        if (path_in_file) {
+            // Vérifie si le fichier existe encore
+            if (access(path_in_file, F_OK) == -1) {
+                // Si le fichier n'existe plus, on ne conserve pas cette ligne
+                continue;
             }
         }
 
-        // Passe à l'élément suivant dans la liste chaînée
-        current = current->next;
+        // Si le fichier existe, on conserve la ligne
+        lines[line_count] = strdup(line);
+        if (!lines[line_count]) {
+            perror("Erreur d'allocation mémoire");
+            fclose(file);
+            return;
+        }
+        line_count++;
     }
 
-    fclose(file);  // Ferme le fichier après les modifications
+    fclose(file);  // Ferme le fichier après la lecture
+
+    // Ouvre à nouveau le fichier en mode écriture pour le réécrire sans les lignes obsolètes
+    file = fopen(logfile, "w");
+    if (!file) {
+        perror("Erreur lors de l'ouverture du fichier en écriture");
+        return;
+    }
+
+    // Réécriture du fichier avec les lignes valides
+    for (int i = 0; i < line_count; i++) {
+        fprintf(file, "%s", lines[i]);
+        free(lines[i]);  // Libère la mémoire allouée pour la ligne
+    }
+
+    fclose(file);  // Ferme le fichier après la réécriture
 }
 
 void write_log_element(log_element *elt, FILE *logfile){
