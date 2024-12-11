@@ -7,6 +7,7 @@
     <option name="/Default/RiderDebugger/RiderRestoreDecompile/RestoreDecompileSetting/@EntryValue" value="false" type="bool" />
     <option name="/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue" value="true" type="bool" />
     <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexRemoved" />
   </component>
   <component name="CMakeProjectFlavorService">
     <option name="flavorId" value="CMakePlainProjectFlavor" />
@@ -17,7 +18,15 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="" />
+    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backup_manager.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/deduplication.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/deduplication.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/file_handler.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/file_handler.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/backup.c" beforeDir="false" afterPath="$PROJECT_DIR$/test/backup.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/list_backups.c" beforeDir="false" afterPath="$PROJECT_DIR$/test/list_backups.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/md5_example.c" beforeDir="false" afterPath="$PROJECT_DIR$/test/md5_example.c" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

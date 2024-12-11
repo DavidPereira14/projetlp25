@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <time.h>
 #include <sys/stat.h>
-
+#include <unistd.h>
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
     struct stat path_stat;
