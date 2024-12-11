@@ -258,16 +258,12 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
     */
 }
 
-// Fonction pour restaurer une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
-    /* @param: backup_id est le chemin vers le répertoire de la sauvegarde que l'on veut restaurer
-    *          restore_dir est le répertoire de destination de la restauration
-    */
-        DIR *src;
+    DIR *src;
     struct dirent *entry;
     struct stat src_stat;
 
-    src = opendir(src_dir);
+    src = opendir(backup_id);
     if (!src) {
         perror("Erreur lors de l'ouverture du répertoire source");
         return;
@@ -280,8 +276,8 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         }
 
         char src_path[1024], dest_path[1024];
-        snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
-        snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
+        snprintf(src_path, sizeof(src_path), "%s/%s", backup_id, entry->d_name);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", restore_dir, entry->d_name);
 
         if (stat(src_path, &src_stat) == -1) {
             perror("Erreur lors de la récupération des informations sur le fichier source");
@@ -302,6 +298,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
 
     closedir(src);
 }
+
 
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
 void list_backups(const char *backup_dir){
