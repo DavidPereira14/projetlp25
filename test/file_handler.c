@@ -3,8 +3,23 @@
 #include <string.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include "file_handler.h"
-#include "deduplication.h"
+#include <openssl/md5.h>
+
+
+// Structure pour l'élément de log
+typedef struct log_element {
+    char *path;
+    char *date;
+    unsigned char md5[MD5_DIGEST_LENGTH];
+    struct log_element *next;
+    struct log_element *prev;
+} log_element;
+
+// Structure pour la liste de logs
+typedef struct {
+    log_element *head;
+    log_element *tail;
+} log_t;
 
 // Fonction permettant de lire un élément du fichier .backup_log
 log_t read_backup_log(const char *logfile){
@@ -162,4 +177,56 @@ void list_files(const char *path){
   if (closedir(dir) != 0) {
     perror("Erreur lors de la fermeture du répertoire");
   }
+}
+
+int main() {
+    const char *logfile = "backup_log.txt";
+
+    // Lire les logs existants
+    log_t logs = read_backup_log(logfile);
+    printf("Logs lus :\n");
+    log_element *current = logs.head;
+    while (current) {
+        printf("Chemin : %s, Date : %s, MD5 : ", current->path, current->date);
+        for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+            printf("%02x", current->md5[i]);
+        }
+        printf("\n");
+        current = current->next;
+    }
+
+    // Ouvrir le fichier de log en mode ajout
+    FILE *logfile_ptr = fopen(logfile, "a");
+    if (logfile_ptr == NULL) {
+        perror("Erreur lors de l'ouverture du fichier de log");
+        return EXIT_FAILURE;  // Quitte si le fichier ne peut pas être ouvert
+    }
+
+    // Ajouter un nouvel élément
+    log_element new_log = {
+        .path = strdup("/home/user/salut.txt"),
+        .date = strdup("2024-12-11 10:00:00"),
+        .md5 = {0x1f, 0x6d, 0x3a, 0x5e, 0x2f, 0x7a, 0x9e, 0xa3, 0x4b, 0x9f, 0x6c, 0xa8, 0x11, 0x21, 0x1c, 0x70}
+    };
+    write_log_element(&new_log, logfile_ptr);  // Passer le fichier ouvert
+    printf("Nouveau log ajouté.\n");
+
+    // Mise à jour des logs existants
+    printf("Mise à jour des logs...\n");
+    update_backup_log(logfile, &logs);
+
+    // Libération de la mémoire allouée
+    current = logs.head;
+    while (current) {
+        log_element *temp = current;
+        current = current->next;
+        free(temp->path);
+        free(temp->date);
+        free(temp);
+    }
+
+    // Fermer le fichier de log
+    fclose(logfile_ptr);
+
+    return 0;
 }
