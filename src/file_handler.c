@@ -13,31 +13,64 @@ log_t read_backup_log(const char *logfile){
     * @param: logfile - le chemin vers le fichier .backup_log
     * @return: une structure log_t
     */
-  FILE *file = fopen(logfile, "r");
-  if (!file) {
-    perror("Erreur lors de l'ouverture du fichier .backup_log");
-    exit(EXIT_FAILURE); // Quitte en cas d'erreur d'ouverture
-  }
-
-  // Initialise une liste vide pour stocker les logs
-  log_t log_list = { NULL, NULL };
-
-  char line[1024];
-
-  while (fgets(line, sizeof(line), file)) {
-    log_element *nv_elmt = malloc(sizeof(log_element));
-    if (!nv_elmt) {
-      perror("Erreur d'allocation mémoire");
-      fclose(file);
-      exit(EXIT_FAILURE);
+    FILE *file = fopen(logfile, "r");
+    if (!file) {
+        perror("Erreur lors de l'ouverture du fichier .backup_log");
+        exit(EXIT_FAILURE); // Quitte en cas d'erreur d'ouverture
     }
 
-    // Variables temporaires pour stocker les données de la ligne
-    char path[256], date[32], md5_str[MD5_DIGEST_LENGTH * 2 + 1];
+    // Initialise une liste vide pour stocker les logs
+    log_t log_list = { NULL, NULL };
 
+    char line[1024];  // Tableau pour stocker chaque ligne du fichier
 
+    while (fgets(line, sizeof(line), file)) {
+        // Crée un nouvel élément pour la liste chaînée
+        log_element *new_element = malloc(sizeof(log_element));
+        if (!new_element) {
+            perror("Erreur d'allocation mémoire");
+            fclose(file);
+            exit(EXIT_FAILURE);
+        }
+
+        // Parse la ligne en utilisant strtok pour extraire les données
+        char *path = strtok(line, ";");
+        char *time = strtok(NULL, ";");
+        char *md5_str = strtok(NULL, "\n");  // "\n" pour ignorer la fin de ligne
+
+        if (!path || !time || !md5_str) {
+            perror("Erreur lors de la récupération des données");
+            free(new_element); // Libère l'élément en cas d'erreur
+            fclose(file);
+            exit(EXIT_FAILURE);
+        }
+
+        // Remplir l'élément avec les valeurs extraites
+        new_element->path = strdup(path);  // Duplication pour éviter les problèmes de gestion de mémoire
+        new_element->date = strdup(time);
+
+        // Convertir la chaîne MD5 en tableau d'octets
+        for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+            sscanf(md5_str + (i * 2), "%2hhx", &new_element->md5[i]);
+        }
+
+        // Ajout de l'élément à la liste chaînée
+        new_element->next = NULL;
+        new_element->prev = log_list.tail;
+
+        if (log_list.tail) {
+            log_list.tail->next = new_element;  // Relie le précédent élément
+        }
+        log_list.tail = new_element;  // Le nouvel élément devient le dernier
+
+        if (log_list.head == NULL) {
+            log_list.head = new_element;  // Si la liste était vide, le nouvel élément est aussi le premier
+        }
+    }
+
+    fclose(file);
+    return log_list;  // Retourne la liste chaînée remplie
 }
-
 // Fonction permettant de mettre à jour une ligne du fichier .backup_log
 void update_backup_log(const char *logfile, log_t *logs){
   /* Implémenter la logique de modification d'une ligne du fichier ".bakcup_log"
