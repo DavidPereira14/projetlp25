@@ -135,17 +135,29 @@ void update_backup_log(const char *logfile, log_t *logs){
     fclose(file);  // Ferme le fichier après les modifications
 }
 
-void write_log_element(log_element *elt, FILE *logfile){
-  /* Implémenter la logique pour écrire un élément log de la liste chaînée log_element dans le fichier .backup_log
-   * @param: elt - un élément log à écrire sur une ligne
-   *         logfile - le chemin du fichier .backup_log
-   */
-  FILE *f = fopen(logfile, "a");
-  if (f == NULL){
-    perror("Erreur lors de l'ouverture du fichier");
+void write_log_element(log_element *elt, FILE *logfile) {
+    /* Implémenter la logique pour écrire un élément log de la liste chaînée log_element dans le fichier .backup_log
+     * @param: elt - un élément log à écrire sur une ligne
+     *         logfile - le chemin du fichier .backup_log
+     */
+
+    // Ouvre le fichier en mode ajout (sans fseek)
+    FILE *f = fopen(logfile, "a");
+    if (f == NULL) {
+        perror("Erreur lors de l'ouverture du fichier");
+        return;  // Quitte la fonction en cas d'erreur
     }
-    fseek(logfile, 0, SEEK_END);
-    fprintf(f, "%s;%s;%s", elt->path, elt->date, elt->md5);
+
+    // Convertir le tableau MD5 en chaîne hexadécimale
+    char md5_str[MD5_DIGEST_LENGTH * 2 + 1];  // Taille pour la chaîne hex (16 octets -> 32 caractères + '\0')
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        sprintf(&md5_str[i * 2], "%02x", elt->md5[i]);
+    }
+
+    // Écrit l'élément dans le fichier
+    fprintf(f, "%s;%s;%s\n", elt->path, elt->date, md5_str);
+
+    // Ferme le fichier
     fclose(f);
 }
 
