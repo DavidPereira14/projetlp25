@@ -15,7 +15,7 @@ typedef struct log_element{
 
 // Structure pour une liste de log représentant le contenu du fichier backup_log
 typedef struct {
-    log_element *head; // Début de la liste de log 
+    log_element *head; // Début de la liste de log
     log_element *tail; // Fin de la liste de log
 } log_t;
 
