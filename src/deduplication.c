@@ -89,5 +89,40 @@ void undeduplicate_file(FILE *file, Chunk **chunks, int *chunk_count) {
     *           chunks représente le tableau de chunk qui contiendra les chunks restauré depuis filename
     *           chunk_count est un compteur du nombre de chunk restauré depuis le fichier filename
     */
+    unsigned char buffer[CHUNK_SIZE];
+    unsigned char md5[MD5_DIGEST_LENGTH];
+    int index = 0;
+
+    // Réinitialisation des chunks et du compteur
+    *chunks = NULL;
+    *chunk_count = 0;
+
+    // Lecture du fichier dédupliqué
+    while (fread(md5, 1, MD5_DIGEST_LENGTH, file) == MD5_DIGEST_LENGTH) {
+        // Lecture des données du chunk
+        if (fread(buffer, 1, CHUNK_SIZE, file) != CHUNK_SIZE) {
+            fprintf(stderr, "Erreur: lecture des données du chunk échouée.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Ajout des données au tableau de chunks
+        *chunks = realloc(*chunks, sizeof(Chunk) * (*chunk_count + 1));
+        if (*chunks == NULL) {
+            perror("Erreur d'allocation mémoire pour les chunks");
+            exit(EXIT_FAILURE);
+        }
+
+        (*chunks)[*chunk_count].data = malloc(CHUNK_SIZE);
+        if ((*chunks)[*chunk_count].data == NULL) {
+            perror("Erreur d'allocation mémoire pour les données du chunk");
+            exit(EXIT_FAILURE);
+        }
+
+        memcpy((*chunks)[*chunk_count].data, buffer, CHUNK_SIZE);
+        memcpy((*chunks)[*chunk_count].md5, md5, MD5_DIGEST_LENGTH);
+        (*chunk_count)++;
+    }
+
+    printf("Restauration réussie. Nombre de chunks restaurés : %d\n", *chunk_count);
 
 }
