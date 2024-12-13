@@ -169,6 +169,9 @@ void list_files(const char *path){
 
   // Parcourt les entrées du répertoire
   while ((entry = readdir(dir)) != NULL) {
+      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+          continue;
+      }
     printf("%s\n", entry->d_name);
   }
 
