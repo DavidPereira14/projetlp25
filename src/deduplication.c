@@ -27,31 +27,58 @@ int find_md5(Md5Entry *hash_table, unsigned char *md5) {
     *           md5 est le md5 du chunk dont on veut déterminer l'unicité
     *  @return: retourne l'index s'il trouve le md5 dans le tableau et -1 sinon
     */
-    int resultat = -1;
-    int i = 0;
-    while (resultat == -1 && i < HASH_TABLE_SIZE){
-        if (strcmp(hash_table[i].md5,md5) == 0){
-            resultat = hash_table[i].index;
+    for(int i = 0;i<HASH_TABLE_SIZE;i++) {
+        if (memcmp(hash_table[i].md5,md5,HASH_TABLE_SIZE) == 0){
+            return hash_table[i].index;
         }
-        i++;
     }
-    return resultat;
+    return -1;
 }
 
 // Ajouter un MD5 dans la table de hachage
 void add_md5(Md5Entry *hash_table, unsigned char *md5, int index) {
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        hash_table[index].md5[i] = md5[i];
+    unsigned int position = hash_md5(md5);
+    while(hash_table[position].index == -1){
+        position = (position + 1) % HASH_TABLE_SIZE;
     }
-    hash_table[index].index = index;
+    memcpy(hash_table[position].md5,md5,MD5_DIGEST_LENGTH);
+    hash_table[position].index = index;
 }
 
 // Fonction pour convertir un fichier non dédupliqué en tableau de chunks
-void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table){
+void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
     /* @param:  file est le fichier qui sera dédupliqué
     *           chunks est le tableau de chunks initialisés qui contiendra les chunks issu du fichier
     *           hash_table est le tableau de hachage qui contient les MD5 et l'index des chunks unique
     */
+    unsigned char buffer[CHUNK_SIZE];
+    int chunk_index = 0;
+    size_t octets_lu;
+    unsigned char md5[MD5_DIGEST_LENGTH];
+    //Lecture du fichier chunk par chunk
+    while ((octets_lu = fread(buffer,1,CHUNK_SIZE,file)) > 0) {
+        //On calcule le MD5 du chunck lu
+        compute_md5(buffer,octets_lu,md5);
+
+        //Verification que ce MD5 est dans la table de hachage
+        int existing_index = find_md5(hash_table,md5);
+        if (existing_index == -1) {
+            chunks[chunk_index].data = malloc(octets_lu);
+            if (!chunks[chunk_index].data) {
+                perror("Erreur d'allocation mémore");
+                exit(EXIT_FAILURE);
+            }
+            memcpy(chunks[chunk_index].data,buffer,octets_lu); //On copie les données dans le chunk
+            memcpy(chunks[chunk_index].md5,md5,MD5_DIGEST_LENGTH); //On copie le MD5 dans la structure
+            add_md5(hash_table,md5);//On ajoute le MD5 trouvé dans la table de hachage
+            chunk_index++;//Incrémente l'index des chunks
+        }else {
+            //Le chunk existe déjà, ainsi pas besoin de le dupliquer
+            printf("Chunk %d déjà sauvegardé avec l'index : %d \n",chunk_index,existing_index);
+        }
+    }
+    //Fichier bien dupliqué
+    printf("Fichier dédupliqué avec succés. Nombre de chunks unique : %d",chunk_index);
 }
 
 
