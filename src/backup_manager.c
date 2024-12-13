@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/syslimits.h>
 
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
@@ -244,7 +245,6 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
     */
 }
 
-
 // Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
     /*
@@ -258,47 +258,85 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
     */
 }
 
+// Fonction de restauration des fichiers à partir d'une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
-    DIR *src;
-    struct dirent *entry;
-    struct stat src_stat;
-
-    src = opendir(backup_id);
-    if (!src) {
-        perror("Erreur lors de l'ouverture du répertoire source");
+    // Vérification du répertoire de destination
+    if (check_directory(restore_dir) != 0) {
         return;
     }
 
-    // Parcourir les fichiers et répertoires
-    while ((entry = readdir(src)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
+    char backup_path[PATH_MAX];
+    snprintf(backup_path, sizeof(backup_path), "%s/%s", restore_dir, backup_id);
 
-        char src_path[1024], dest_path[1024];
-        snprintf(src_path, sizeof(src_path), "%s/%s", backup_id, entry->d_name);
-        snprintf(dest_path, sizeof(dest_path), "%s/%s", restore_dir, entry->d_name);
-
-        if (stat(src_path, &src_stat) == -1) {
-            perror("Erreur lors de la récupération des informations sur le fichier source");
-            continue;
-        }
-
-        if (S_ISDIR(src_stat.st_mode)) {
-            // Créer le sous-répertoire dans la destination
-            mkdir(dest_path, 0755);
-            restore_backup(src_path, dest_path);
-        } else {
-            // Créer un lien dur vers le fichier source
-            if (link(src_path, dest_path) == -1) {
-                perror("Erreur lors de la création d'un lien dur");
-            }
-        }
+    // Vérification si le répertoire de sauvegarde existe
+    struct stat st;
+    if (stat(backup_path, &st) == -1) {
+        perror("Erreur : Le répertoire de sauvegarde n'existe pas ou est inaccessible");
+        return;
     }
 
-    closedir(src);
-}
+    // Vérification du fichier de log de la sauvegarde
+    char log_file_path[PATH_MAX];
+    snprintf(log_file_path, sizeof(log_file_path), "%s/.backup_log", backup_path);
+    log_t logs = read_backup_log(log_file_path);  // Lire le fichier de log
+    if (!logs.head) {
+        printf("Erreur : Aucun log de sauvegarde trouvé dans %s\n", log_file_path);
+        return;
+    }
 
+    log_element *current = logs.head;
+
+    // Destination par défaut si non spécifiée
+    char default_dest[PATH_MAX];
+    if (!restore_dir) {
+        if (!getcwd(default_dest, sizeof(default_dest))) {
+            perror("Impossible de déterminer le répertoire courant");
+            free_log(&logs);
+            return;
+        }
+        restore_dir = default_dest;
+    }
+
+    // Parcourir les fichiers à restaurer
+    while (current != NULL) {
+        char src_path[PATH_MAX], dest_path[PATH_MAX];
+        snprintf(src_path, sizeof(src_path), "%s/%s", backup_path, current->path);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", restore_dir, current->path);
+
+        struct stat src_stat, dest_stat;
+
+        // Vérifier si le fichier existe dans la sauvegarde
+        if (stat(src_path, &src_stat) == -1) {
+            perror("Erreur lors de la lecture du fichier source");
+            current = current->next;
+            continue;
+        }
+
+        // Vérifier si le fichier existe déjà dans la destination
+        int file_exists = (stat(dest_path, &dest_stat) != -1);
+
+        // Si le fichier existe déjà, vérifier les conditions pour le remplacer
+        if (file_exists) {
+            // Vérifier si la date de modification est postérieure
+            if (src_stat.st_mtime > dest_stat.st_mtime) {
+                copy_file(src_path, dest_path);
+            }
+            // Vérifier si la taille diffère
+            else if (src_stat.st_size != dest_stat.st_size) {
+                copy_file(src_path, dest_path);
+            }
+        } else {
+            // Si le fichier n'existe pas, le copier
+            copy_file(src_path, dest_path);
+        }
+
+        current = current->next;
+    }
+
+    free_log(&logs);  // Libérer la mémoire allouée pour les logs
+
+    printf("Restauration terminée dans le répertoire '%s'\n", restore_dir);
+}
 
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
 void list_backups(const char *backup_dir){
