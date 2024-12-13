@@ -253,11 +253,44 @@ void backup_file(const char *filename) {
 
 
 // Fonction permettant la restauration du fichier backup via le tableau de chunk
+// Fonction pour restaurer un fichier à partir des chunks dédupliqués
 void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_count) {
-    /*
-    */
-}
+    // Ouvrir le fichier de sortie en mode binaire
+    FILE *output_file = fopen(output_filename, "wb");
+    if (!output_file) {
+        perror("Erreur lors de l'ouverture du fichier de sortie");
+        return;
+    }
 
+    Md5Entry hash_table[HASH_TABLE_SIZE] = {0}; // Table de hachage pour éviter les doublons
+
+    // Parcourir tous les chunks
+    for (int i = 0; i < chunk_count; i++) {
+        // Vérifier si le chunk est déjà présent dans la table de hachage (pour éviter de réécrire les mêmes données)
+        int index = find_md5(hash_table, chunks[i].md5);
+
+        if (index == -1) {
+            // Si le chunk n'est pas trouvé dans la table de hachage, il est unique, on l'ajoute à la table
+            add_md5(hash_table, chunks[i].md5, i);
+            // Écrire les données du chunk dans le fichier de sortie
+            size_t chunk_size = CHUNK_SIZE;  // Taille fixe du chunk
+            size_t bytes_written = fwrite(chunks[i].data, 1, chunk_size, output_file);
+            if (bytes_written != chunk_size) {
+                fprintf(stderr, "Erreur lors de l'écriture du chunk %d\n", i);
+                fclose(output_file);
+                return;
+            }
+        } else {
+            // Si le chunk est déjà dans la table, cela signifie que nous avons déjà écrit ce chunk
+            // Nous pouvons juste référencer le chunk sans avoir à écrire à nouveau les mêmes données
+            printf("Chunk %d déjà écrit (référence trouvée dans la table de hachage).\n", i);
+        }
+    }
+
+    // Fermer le fichier une fois la restauration terminée
+    fclose(output_file);
+    printf("Fichier restauré avec succès dans '%s'\n", output_filename);
+}
 // Fonction de restauration des fichiers à partir d'une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
     // Vérification du répertoire de destination
