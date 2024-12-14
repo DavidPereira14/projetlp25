@@ -7,14 +7,15 @@
 #include "backup_manager.h"
 #include "network.h"
 
-int main(int argc __attribute__((unused)), char *argv[]) {
+int main(int argc, char *argv[]) {
     // Analyse des arguments de la ligne de commande
     if (argc<3){
         return EXIT_FAILURE;
     }
+
     // Implémentation de la logique de sauvegarde et restauration
     // Exemples : gestion des options --backup, --restore, etc.
-    create_backup(argv[1],argv[2]);
+    create_backup(argv[argc-2],argv[argc-1]);
     return EXIT_SUCCESS;
 }
 

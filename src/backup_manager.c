@@ -153,6 +153,7 @@ void get_timestamp(char *buffer, size_t size) {
              ts.tv_nsec / 1000000);
 }
 
+
 void copie_backup(const char *backup_id, const char *restore_dir) {
     DIR *src;
     struct dirent *entry;
@@ -185,7 +186,7 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
 
         if (S_ISDIR(src_stat.st_mode)) {
             // Créer le sous-répertoire dans la destination
-            mkdir(dest_path, 0755);
+            mkdir(dest_path);
             copie_backup(src_path, dest_path);
         } else {
             // Créer un lien dur vers le fichier source
@@ -194,7 +195,6 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
             }
         }
     }
-
     closedir(src);
 }
 
@@ -218,8 +218,8 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
     snprintf(log_path, sizeof(log_path), "%s/.backup_log", dest_dir);
 
     // Ouvrir le fichier .backup_log en mode lecture/écriture
-    FILE *logfile = fopen(log_path, "r+"); // Utilise "a+" pour ajouter au fichier sans écraser son contenu
-    if (logfile == NULL) {
+    FILE *log_file = fopen(log_path, "r+"); // Utilise "a+" pour ajouter au fichier sans écraser son contenu
+    if (log_file == NULL) {
         printf("Erreur lors de l'ouverture du fichier .backup_log\n");
         return -1; // Retourner une erreur si l'ouverture échoue
     }
@@ -241,7 +241,7 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             // Gestion des dossiers
             if (stat(dest_path, &dest_stat) == -1) {
                 // Le dossier n'existe pas dans la destination, on le crée
-                if (mkdir(dest_path, 0755) == -1) {
+                if (mkdir(dest_path) == -1) {
                     printf("Erreur lors de la création du dossier destination\n");
                     continue;
                 }
@@ -253,7 +253,7 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             if (stat(dest_path, &dest_stat) == -1) {
                 // Le fichier n'existe pas dans la destination, on le copie
                 copy_file(src_path, dest_path);
-                backup_file(dest_path)
+                backup_file(dest_path);
                 //appeler la fonction write_log_element(log_element *elt, FILE *logfile)
             } else {
 
@@ -338,20 +338,18 @@ void create_backup(const char *source_dir, const char *backup_dir) {
         char last_backup_path[1024];
         snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
         printf("Copie complète depuis : %s\n", last_backup_path);
-        mkdir(backup_path, 0755);
+        mkdir(backup_path);
         copie_backup(last_backup_path, backup_path);
         free(last_backup_name);
     }else{
         // Pas de sauvegarde existante, créer un répertoire vide
-        mkdir(backup_path, 0755);
+        mkdir(backup_path);
         fopen(strcat(backup_path,"/.backup_log"),"w");
     }
-
-
+    log_t logs=read_backup_log(backup_path);
     // Sauvegarder les logs dans le fichier
-    update_backup_log(backup_log_path, &logs);
+    update_backup_log(backup_path, &logs);
 
-    closedir(source);
 }
 
 // Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
