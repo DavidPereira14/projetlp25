@@ -27,7 +27,7 @@
     <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/backup_manager.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/backup_test.c" beforeDir="false" afterPath="$PROJECT_DIR$/test/backup_test.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/deduplication.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/deduplication.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -170,7 +170,7 @@
       <workItem from="1734109029367" duration="3568000" />
       <workItem from="1734171330888" duration="2769000" />
       <workItem from="1734175795258" duration="846000" />
-      <workItem from="1734176846097" duration="8832000" />
+      <workItem from="1734176846097" duration="9363000" />
     </task>
     <servers />
   </component>

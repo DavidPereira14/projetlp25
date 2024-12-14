@@ -383,7 +383,7 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
 
     // Parcourir tous les chunks et écrire leurs données dans le fichier
     for (int i = 0; i < chunk_count; i++) {
-        size_t data_size = strlen((char*)chunks[i].data);  // Trouver la taille des données du chunk
+        size_t data_size = CHUNK_SIZE;
         if (fwrite(chunks[i].data, 1, data_size, output_file) != data_size) {
             perror("Erreur d'écriture dans le fichier");
             fclose(output_file);
@@ -440,16 +440,17 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
         return;
     }
 
-    Md5Entry hash_table[HASH_TABLE_SIZE] = {0}; // Table de hachage pour éviter les doublons
+    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};  // Table de hachage pour éviter les doublons
 
-    // Parcourir tous les chunks
+    // Parcourir tous les chunks pour écrire le fichier restauré
     for (int i = 0; i < chunk_count; i++) {
-        // Vérifier si le chunk est déjà présent dans la table de hachage (pour éviter de réécrire les mêmes données)
+        // Vérifier si le chunk est déjà présent dans la table de hachage
         int index = find_md5(hash_table, chunks[i].md5);
 
         if (index == -1) {
-            // Si le chunk n'est pas trouvé dans la table de hachage, il est unique, on l'ajoute à la table
+            // Si le chunk n'est pas trouvé, il est unique, on l'ajoute à la table de hachage
             add_md5(hash_table, chunks[i].md5, i);
+
             // Écrire les données du chunk dans le fichier de sortie
             size_t chunk_size = CHUNK_SIZE;  // Taille fixe du chunk
             size_t bytes_written = fwrite(chunks[i].data, 1, chunk_size, output_file);
@@ -459,16 +460,16 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
                 return;
             }
         } else {
-            // Si le chunk est déjà dans la table, cela signifie que nous avons déjà écrit ce chunk
-            // Nous pouvons juste référencer le chunk sans avoir à écrire à nouveau les mêmes données
+            // Si le chunk est déjà dans la table, on peut l'ignorer (il a déjà été écrit)
             printf("Chunk %d déjà écrit (référence trouvée dans la table de hachage).\n", i);
         }
     }
 
-    // Fermer le fichier une fois la restauration terminée
+    // Fermer le fichier après avoir écrit tous les chunks
     fclose(output_file);
     printf("Fichier restauré avec succès dans '%s'\n", output_filename);
 }
+
 // Fonction de restauration des fichiers à partir d'une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
     // Vérification du répertoire de destination
