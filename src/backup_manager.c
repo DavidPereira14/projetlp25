@@ -8,7 +8,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <sys/syslimits.h>
+#include <limits.h>
 
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
@@ -253,7 +253,7 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             if (stat(dest_path, &dest_stat) == -1) {
                 // Le fichier n'existe pas dans la destination, on le copie
                 copy_file(src_path, dest_path);
-                backup_file(dest_path)
+                backup_file(dest_path);
                 //appeler la fonction write_log_element(log_element *elt, FILE *logfile)
             } else {
 
