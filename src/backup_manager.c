@@ -373,126 +373,64 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     closedir(source);
 }
 
-// Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
+// Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
-    /*
-    */
-    printf("\nRAS\n");
+    FILE *output_file = fopen(output_filename, "wb");  // Ouvrir le fichier de sortie en mode binaire
+    if (!output_file) {
+        perror("Erreur d'ouverture du fichier de sauvegarde");
+        return;
+    }
+
+    // Parcourir tous les chunks et écrire leurs données dans le fichier
+    for (int i = 0; i < chunk_count; i++) {
+        size_t data_size = strlen((char*)chunks[i].data);  // Trouver la taille des données du chunk
+        if (fwrite(chunks[i].data, 1, data_size, output_file) != data_size) {
+            perror("Erreur d'écriture dans le fichier");
+            fclose(output_file);
+            return;
+        }
+    }
+
+    fclose(output_file);  // Fermer le fichier après l'écriture
+    printf("Fichier de sauvegarde créé : %s\n", output_filename);
 }
 
 // Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
-    // Vérifie si le fichier existe
+    // Vérifier si le fichier source existe
     if (!file_exists(filename)) {
-        fprintf(stderr, "Le fichier source n'existe pas : %s\n", filename);
+        printf("Le fichier %s n'existe pas.\n", filename);
         return;
     }
 
-    // Générer un nom de dossier de sauvegarde basé sur la date et l'heure actuelles
-    char backup_folder[100];
-    get_timestamp(backup_folder,100);
-
-    // Crée le répertoire de sauvegarde
-    if (mkdir(backup_folder, 0755) == -1) {
-        perror("Erreur lors de la création du répertoire de sauvegarde");
+    // Ouvrir le fichier source en mode binaire
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Erreur d'ouverture du fichier");
         return;
     }
 
-    // Crée un fichier .backup_log dans le répertoire de sauvegarde
-    char backup_log_path[200];
-    snprintf(backup_log_path, sizeof(backup_log_path), "%s/.backup_log", backup_folder);
-    FILE *log_file = fopen(backup_log_path, "a");
-    if (!log_file) {
-        perror("Erreur lors de la création du fichier de log");
-        return;
-    }
+    // Initialiser la table de hachage pour la déduplication et un tableau de chunks pour stocker les données dédupliquées
+    Md5Entry hash_table[HASH_TABLE_SIZE] = { 0 };
+    Chunk chunks[100];  // Tableau pour stocker les chunks
 
-    // Initialisation de la table de hachage pour la déduplication
-    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};
+    // Dédupliquer le fichier en le divisant en chunks et en évitant les doublons
+    unsigned char buffer[CHUNK_SIZE];
+    size_t bytes_read;
+    unsigned char md5[MD5_DIGEST_LENGTH];
 
-    // Ouvre le fichier source pour la lecture
-    FILE *source_file = fopen(filename, "rb");
-    if (!source_file) {
-        perror("Erreur lors de l'ouverture du fichier source");
-        fclose(log_file);
-        return;
-    }
+    // Appeler la fonction deduplicate_file pour découper le fichier en chunks et éviter les doublons
+    deduplicate_file(filename,chunks,hash_table);
 
-    // Crée un tableau pour stocker les chunks du fichier
-    Chunk *chunks = NULL;
-    int chunk_count = 0;
+    // Après la déduplication, enregistrer les chunks dans un fichier de sauvegarde
+    write_backup_file("backup_file.bin", chunks, 100);  // Enregistrer les chunks uniques dans un fichier
 
-    // Appel de la fonction de déduplication sur le fichier source
-    deduplicate_file(source_file, chunks, hash_table);
+    // Fermer le fichier source
+    fclose(file);
 
-    // Traitement des chunks dédupliqués et sauvegarde
-    for (int i = 0; i < chunk_count; i++) {
-        // Vérification si ce chunk existe déjà dans la sauvegarde (via la table de hachage)
-        unsigned char md5[MD5_DIGEST_LENGTH];
-        compute_md5(chunks[i].data, CHUNK_SIZE, md5);
-
-        // Recherche du chunk dans la table de hachage
-        int existing_index = find_md5(hash_table, md5);
-        if (existing_index == -1) {
-            // Si le chunk est unique, on l'ajoute à la sauvegarde
-            printf("Ajout du chunk %d à la sauvegarde.\n", i);
-
-            // Nom du fichier pour le chunk basé sur son MD5
-            char chunk_file_path[200];
-            snprintf(chunk_file_path, sizeof(chunk_file_path), "%s/%s.chunk", backup_folder, md5_to_string(md5));
-
-            // Ouvre le fichier pour écrire les données du chunk
-            FILE *chunk_file = fopen(chunk_file_path, "wb");
-            if (!chunk_file) {
-                perror("Erreur lors de l'ouverture du fichier de chunk");
-                continue;  // Passe au chunk suivant
-            }
-
-            // Écrit les données du chunk dans le fichier
-            size_t written = fwrite(chunks[i].data, 1, CHUNK_SIZE, chunk_file);
-            if (written != CHUNK_SIZE) {
-                perror("Erreur lors de l'écriture du chunk dans le fichier");
-            }
-
-            fclose(chunk_file);  // Ferme le fichier de chunk
-
-            // Crée un nouvel élément de log
-            log_element *new_log = malloc(sizeof(log_element));
-            if (!new_log) {
-                perror("Erreur d'allocation mémoire pour le log");
-                continue;
-            }
-
-            // Remplir le nouvel élément de log
-            new_log->path = strdup(chunk_file_path);
-            new_log->date = strdup(backup_folder);  // Utilisation de l'heure comme identifiant
-            memcpy(new_log->md5, md5, MD5_DIGEST_LENGTH);
-
-            // Écrire l'élément de log dans le fichier
-            write_log_element(new_log, log_file);
-
-            // Libère la mémoire allouée pour le log
-            free(new_log->path);
-            free(new_log->date);
-            free(new_log);
-        } else {
-            printf("Le chunk %d existe déjà avec l'index %d. Pas de sauvegarde nécessaire.\n", i, existing_index);
-        }
-    }
-
-    // Libération de la mémoire allouée pour les chunks
-    for (int i = 0; i < chunk_count; i++) {
-        free(chunks[i].data);
-    }
-
-    free(chunks);
-    fclose(source_file);
-    fclose(log_file);
-
-    printf("Sauvegarde terminée.\n");
+    printf("Sauvegarde du fichier effectuée.\n");
 }
 
-// Fonction permettant la restauration du fichier backup via le tableau de chunk
 // Fonction pour restaurer un fichier à partir des chunks dédupliqués
 void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     // Ouvrir le fichier de sortie en mode binaire
