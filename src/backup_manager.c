@@ -8,7 +8,26 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <sys/syslimits.h>
+#include <limits.h>
+
+// Fonction pour convertir un MD5 en chaîne hexadécimale
+char* md5_to_string(unsigned char *md5) {
+    static char md5_str[MD5_DIGEST_LENGTH * 2 + 1];
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        sprintf(&md5_str[i * 2], "%02x", md5[i]);
+    }
+    return md5_str;
+}
+
+// Fonction qui vérifie l'éxistance du fichier
+int file_exists(const char *filename) {
+    // Utilise la fonction access pour vérifier si le fichier existe
+    if (access(filename, F_OK) == 0) {
+        return 1;  // Le fichier existe
+    } else {
+        return 0;  // Le fichier n'existe pas
+    }
+}
 
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
@@ -352,22 +371,64 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 
 }
 
-// Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
+// Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
-    /*
-    */
-    printf("\nRAS\n");
+    FILE *output_file = fopen(output_filename, "wb");  // Ouvrir le fichier de sortie en mode binaire
+    if (!output_file) {
+        perror("Erreur d'ouverture du fichier de sauvegarde");
+        return;
+    }
+
+    // Parcourir tous les chunks et écrire leurs données dans le fichier
+    for (int i = 0; i < chunk_count; i++) {
+        size_t data_size = CHUNK_SIZE;
+        if (fwrite(chunks[i].data, 1, data_size, output_file) != data_size) {
+            perror("Erreur d'écriture dans le fichier");
+            fclose(output_file);
+            return;
+        }
+    }
+
+    fclose(output_file);  // Fermer le fichier après l'écriture
+    printf("Fichier de sauvegarde créé : %s\n", output_filename);
 }
 
 // Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
-    /*
-    */
-    printf("\nne fais rien sur le fichier %s\n",filename);
+    // Vérifier si le fichier source existe
+    if (!file_exists(filename)) {
+        printf("Le fichier %s n'existe pas.\n", filename);
+        return;
+    }
+
+    // Ouvrir le fichier source en mode binaire
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Erreur d'ouverture du fichier");
+        return;
+    }
+
+    // Initialiser la table de hachage pour la déduplication et un tableau de chunks pour stocker les données dédupliquées
+    Md5Entry hash_table[HASH_TABLE_SIZE] = { 0 };
+    Chunk chunks[100];  // Tableau pour stocker les chunks
+
+    // Dédupliquer le fichier en le divisant en chunks et en évitant les doublons
+    unsigned char buffer[CHUNK_SIZE];
+    size_t bytes_read;
+    unsigned char md5[MD5_DIGEST_LENGTH];
+
+    // Appeler la fonction deduplicate_file pour découper le fichier en chunks et éviter les doublons
+    deduplicate_file(filename,chunks,hash_table);
+
+    // Après la déduplication, enregistrer les chunks dans un fichier de sauvegarde
+    write_backup_file("backup_file.bin", chunks, 100);  // Enregistrer les chunks uniques dans un fichier
+
+    // Fermer le fichier source
+    fclose(file);
+
+    printf("Sauvegarde du fichier effectuée.\n");
 }
 
-
-// Fonction permettant la restauration du fichier backup via le tableau de chunk
 // Fonction pour restaurer un fichier à partir des chunks dédupliqués
 void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     // Ouvrir le fichier de sortie en mode binaire
@@ -377,16 +438,17 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
         return;
     }
 
-    Md5Entry hash_table[HASH_TABLE_SIZE] = {0}; // Table de hachage pour éviter les doublons
+    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};  // Table de hachage pour éviter les doublons
 
-    // Parcourir tous les chunks
+    // Parcourir tous les chunks pour écrire le fichier restauré
     for (int i = 0; i < chunk_count; i++) {
-        // Vérifier si le chunk est déjà présent dans la table de hachage (pour éviter de réécrire les mêmes données)
+        // Vérifier si le chunk est déjà présent dans la table de hachage
         int index = find_md5(hash_table, chunks[i].md5);
 
         if (index == -1) {
-            // Si le chunk n'est pas trouvé dans la table de hachage, il est unique, on l'ajoute à la table
+            // Si le chunk n'est pas trouvé, il est unique, on l'ajoute à la table de hachage
             add_md5(hash_table, chunks[i].md5, i);
+
             // Écrire les données du chunk dans le fichier de sortie
             size_t chunk_size = CHUNK_SIZE;  // Taille fixe du chunk
             size_t bytes_written = fwrite(chunks[i].data, 1, chunk_size, output_file);
@@ -396,16 +458,16 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
                 return;
             }
         } else {
-            // Si le chunk est déjà dans la table, cela signifie que nous avons déjà écrit ce chunk
-            // Nous pouvons juste référencer le chunk sans avoir à écrire à nouveau les mêmes données
+            // Si le chunk est déjà dans la table, on peut l'ignorer (il a déjà été écrit)
             printf("Chunk %d déjà écrit (référence trouvée dans la table de hachage).\n", i);
         }
     }
 
-    // Fermer le fichier une fois la restauration terminée
+    // Fermer le fichier après avoir écrit tous les chunks
     fclose(output_file);
     printf("Fichier restauré avec succès dans '%s'\n", output_filename);
 }
+
 // Fonction de restauration des fichiers à partir d'une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
     // Vérification du répertoire de destination
@@ -439,7 +501,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     if (!restore_dir) {
         if (!getcwd(default_dest, sizeof(default_dest))) {
             perror("Impossible de déterminer le répertoire courant");
-            free_log(&logs);
+            free(&logs);
             return;
         }
         restore_dir = default_dest;
@@ -481,7 +543,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         current = current->next;
     }
 
-    free_log(&logs);  // Libérer la mémoire allouée pour les logs
+    free(&logs);  // Libérer la mémoire allouée pour les logs
 
     printf("Restauration terminée dans le répertoire '%s'\n", restore_dir);
 }
