@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <openssl/md5.h>
+#include <sys/stat.h> // Pour mkdir
 
 #define CHUNK_SIZE 1024
 #define HASH_TABLE_SIZE 100
@@ -22,6 +23,22 @@ typedef struct {
 // Fonction permettant de vérifier l'existence d'un fichier
 int file_exists(const char *filename) {
     return access(filename, F_OK) == 0;
+}
+
+// Fonction pour vérifier si un répertoire existe, et le créer si nécessaire
+int directory_exists(const char *path) {
+    struct stat info;
+    if (stat(path, &info) != 0) {
+        // Le répertoire n'existe pas, essayons de le créer
+        if (mkdir(path, 0777) == 0) {
+            printf("Répertoire %s créé avec succès.\n", path);
+            return 1;
+        } else {
+            perror("Erreur lors de la création du répertoire");
+            return 0;
+        }
+    }
+    return S_ISDIR(info.st_mode);  // Si c'est un répertoire, retourne 1
 }
 
 // Fonction de hachage MD5 pour l'indexation dans la table de hachage
@@ -68,7 +85,7 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
     while ((bytes_read = fread(buffer, 1, CHUNK_SIZE, file)) > 0) {
         compute_md5(buffer, bytes_read, md5);
         int existing_index = find_md5(hash_table, md5);
-        
+
         if (existing_index == -1) {
             chunks[chunk_index].data = malloc(bytes_read);
             if (!chunks[chunk_index].data) {
@@ -94,6 +111,11 @@ void backup_file(const char *filename, const char *backup_folder) {
         return;
     }
 
+    // Vérifier si le répertoire de sauvegarde existe, sinon le créer
+    if (!directory_exists(backup_folder)) {
+        return; // Si le répertoire n'existe pas et ne peut pas être créé, on arrête l'exécution
+    }
+
     FILE *file = fopen(filename, "rb");
     if (!file) {
         perror("Erreur d'ouverture du fichier");
@@ -112,7 +134,7 @@ void backup_file(const char *filename, const char *backup_folder) {
 // Fonction principale pour tester les fonctionnalités
 int main() {
     const char *filename = "testfile.txt";  // Remplacez par le nom d'un fichier valide sur votre système
-    const char *backup_folder = "./backup";  // Répertoire de sauvegarde (non utilisé dans cet exemple)
+    const char *backup_folder = "./backup";  // Répertoire de sauvegarde
 
     backup_file(filename, backup_folder);
 
