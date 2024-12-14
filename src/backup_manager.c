@@ -441,7 +441,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     if (!restore_dir) {
         if (!getcwd(default_dest, sizeof(default_dest))) {
             perror("Impossible de déterminer le répertoire courant");
-            free_log(&logs);
+            free(&logs);
             return;
         }
         restore_dir = default_dest;
@@ -483,7 +483,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         current = current->next;
     }
 
-    free_log(&logs);  // Libérer la mémoire allouée pour les logs
+    free(&logs);  // Libérer la mémoire allouée pour les logs
 
     printf("Restauration terminée dans le répertoire '%s'\n", restore_dir);
 }
