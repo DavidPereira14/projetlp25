@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -I./src -lssl -lcrypto -Wno-deprecated-declarations -v
-SRC = src/main.c src/file_handler.c src/deduplication.c src/backup_manager.c
+CFLAGS = -Wall -Wextra -I./src
+SRC = src/main.c src/file_handler.c src/deduplication.c src/backup_manager.c src/network.c
 OBJ = $(SRC:.c=.o)
 TARGET = lp25_borgbackup
 

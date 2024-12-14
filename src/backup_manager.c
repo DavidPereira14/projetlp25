@@ -92,7 +92,6 @@ int supprimer_recursivement(const char *chemin) {
                 return -1;
             }
         }
-
         closedir(dir);
 
         // Supprimer le répertoire une fois vide
@@ -275,7 +274,9 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-
+        if (strcmp(entry->d_name, ".backup_log") == 0 ) {
+            continue;
+        }
         char dest_path[1024], src_path[1024];
         snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
         snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
@@ -357,12 +358,14 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     /*
     */
+    printf("\nRAS\n");
 }
 
 // Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
     /*
     */
+    printf("\nne fais rien sur le fichier %s\n",filename);
 }
 
 
