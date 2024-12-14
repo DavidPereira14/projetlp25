@@ -46,22 +46,67 @@ int check_directory(const char *path) {
     return 0; // Succès
 }
 
-// Fonction pour obtenir l'horodatage formaté
-void get_timestamp(char *buffer, size_t size) {
-    struct timespec ts;
-    struct tm *tm_info;
+// Fonction pour supprimer un fichier ou un dossier récursivement
+int supprimer_recursivement(const char *chemin) {
+    struct stat chemin_stat;
 
-    clock_gettime(CLOCK_REALTIME, &ts);
-    tm_info = localtime(&ts.tv_sec);
+    // Vérifier si le chemin existe et obtenir ses informations
+    if (stat(chemin, &chemin_stat) != 0) {
+        perror("Erreur lors de l'obtention des informations sur le chemin");
+        return -1;
+    }
 
-    snprintf(buffer, size, "%04d-%02d-%02d-%02d:%02d:%02d.%03ld",
-             tm_info->tm_year + 1900,
-             tm_info->tm_mon + 1,
-             tm_info->tm_mday,
-             tm_info->tm_hour,
-             tm_info->tm_min,
-             tm_info->tm_sec,
-             ts.tv_nsec / 1000000);
+    // Si c'est un fichier, on le supprime
+    if (S_ISREG(chemin_stat.st_mode) || S_ISLNK(chemin_stat.st_mode)) {
+        if (remove(chemin) == 0) {
+            printf("Fichier supprimé : %s\n", chemin);
+            return 0;
+        } else {
+            perror("Erreur lors de la suppression du fichier");
+            return -1;
+        }
+    }
+
+    // Si c'est un répertoire, on traite son contenu récursivement
+    if (S_ISDIR(chemin_stat.st_mode)) {
+        DIR *dir = opendir(chemin);
+        if (!dir) {
+            perror("Erreur lors de l'ouverture du répertoire");
+            return -1;
+        }
+
+        struct dirent *entry;
+        char sous_chemin[1024];
+
+        // Parcourir les entrées du répertoire
+        while ((entry = readdir(dir)) != NULL) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue; // Ignorer les répertoires spéciaux
+            }
+
+            snprintf(sous_chemin, sizeof(sous_chemin), "%s/%s", chemin, entry->d_name);
+
+            // Suppression récursive du contenu
+            if (supprimer_recursivement(sous_chemin) != 0) {
+                closedir(dir);
+                return -1;
+            }
+        }
+
+        closedir(dir);
+
+        // Supprimer le répertoire une fois vide
+        if (rmdir(chemin) == 0) {
+            printf("Répertoire supprimé : %s\n", chemin);
+            return 0;
+        } else {
+            perror("Erreur lors de la suppression du répertoire");
+            return -1;
+        }
+    }
+
+    fprintf(stderr, "Chemin non supporté : %s\n", chemin);
+    return -1;
 }
 
 // Fonction pour trouver la dernière sauvegarde (par ordre alphabétique des noms)
@@ -91,116 +136,183 @@ char *find_last_backup(const char *dest_dir) {
     return last_backup;
 }
 
-int are_files_different(const char *file1, const char *file2) {
-    FILE *f1 = fopen(file1, "rb");
-    FILE *f2 = fopen(file2, "rb");
+// Fonction pour obtenir l'horodatage formaté
+void get_timestamp(char *buffer, size_t size) {
+    struct timespec ts;
+    struct tm *tm_info;
 
-    // Cas où le fichier n'existe que dans le dossier 1
-    if (f1 && !f2) {
-        fclose(f1);
-        return 1; // Fichier seulement dans le dossier 1
-    }
+    clock_gettime(CLOCK_REALTIME, &ts);
+    tm_info = localtime(&ts.tv_sec);
 
-    // Cas où le fichier n'existe que dans le dossier 2
-    if (!f1 && f2) {
-        fclose(f2);
-        return -1; // Fichier seulement dans le dossier 2
-    }
-
-    // Cas où les deux fichiers existent
-    if (f1 && f2) {
-        return 2; // Fichier dans les 2 dossiers
-    }
+    snprintf(buffer, size, "%04d-%02d-%02d-%02d:%02d:%02d.%03ld",
+             tm_info->tm_year + 1900,
+             tm_info->tm_mon + 1,
+             tm_info->tm_mday,
+             tm_info->tm_hour,
+             tm_info->tm_min,
+             tm_info->tm_sec,
+             ts.tv_nsec / 1000000);
 }
 
-void copier_fichier(const char *source, const char *destination) {
-    FILE *src = fopen(source, "rb");  // Ouvre le fichier source en mode binaire
-    if (src == NULL) {
-        perror("Erreur d'ouverture du fichier source");
-        return;
-    }
-
-    FILE *dest = fopen(destination, "wb");  // Ouvre le fichier destination en mode binaire
-    if (dest == NULL) {
-        perror("Erreur d'ouverture du fichier destination");
-        fclose(src);
-        return;
-    }
-
-    char buffer[4096];  // Buffer pour lire et écrire des données
-    size_t bytes_read;
-
-    // Lire et copier le contenu du fichier source dans le fichier destination
-    while ((bytes_read = fread(buffer, 1, sizeof(buffer), src)) > 0) {
-        fwrite(buffer, 1, bytes_read, dest);
-    }
-
-    printf("Le fichier '%s' a été copié vers '%s'.\n", source, destination);
-
-    fclose(src);  // Ferme le fichier source
-    fclose(dest);  // Ferme le fichier destination
-}
-
-
-
-int enregistrement(const char *src_dir, const char *dest_dir){
-    DIR *src = opendir(src_dir);
-    DIR *dest = opendir(dest_dir);
-    if (!dest) {
-        printf("Erreur d'ouverture du répertoire destination");
-        return -1;
-    }
-    if (!src){
-        printf("Erreur : lors de l'ouverture du répertoire source");
-        return -1;
-    }
+void copie_backup(const char *backup_id, const char *restore_dir) {
+    DIR *src;
     struct dirent *entry;
     struct stat src_stat;
-    struct stat dest_stat;
-    while ((entry = readdir(src)) != NULL){
+
+    src = opendir(backup_id);
+    if (!src) {
+        perror("Erreur lors de l'ouverture du répertoire source");
+        return;
+    }
+
+    // Parcourir les fichiers et répertoires
+    while ((entry = readdir(src)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
+        // Ignorer le fichier spécifique ".backup_log"
+        if (strcmp(entry->d_name, ".backup_log") == 0) {
+            continue;
+        }
+
+        char src_path[1024], dest_path[1024];
+        snprintf(src_path, sizeof(src_path), "%s/%s", backup_id, entry->d_name);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", restore_dir, entry->d_name);
+
+        if (stat(src_path, &src_stat) == -1) {
+            perror("Erreur lors de la récupération des informations sur le fichier source");
+            continue;
+        }
+
+        if (S_ISDIR(src_stat.st_mode)) {
+            // Créer le sous-répertoire dans la destination
+            mkdir(dest_path, 0755);
+            copie_backup(src_path, dest_path);
+        } else {
+            // Créer un lien dur vers le fichier source
+            if (link(src_path, dest_path) == -1) {
+                perror("Erreur lors de la création d'un lien dur");
+            }
+        }
+    }
+
+    closedir(src);
+}
+
+int enregistrement(const char *src_dir, const char *dest_dir) {
+    DIR *src = opendir(src_dir);
+    DIR *dest = opendir(dest_dir);
+    if (!dest) {
+        printf("Erreur d'ouverture du répertoire destination\n");
+        return -1;
+    }
+    if (!src) {
+        printf("Erreur lors de l'ouverture du répertoire source\n");
+        return -1;
+    }
+
+    struct dirent *entry;
+    struct stat src_stat;
+    struct stat dest_stat;
+    // Créer le chemin complet du fichier .backup_log
+    char log_path[1024];
+    snprintf(log_path, sizeof(log_path), "%s/.backup_log", dest_dir);
+
+    // Ouvrir le fichier .backup_log en mode lecture/écriture
+    FILE *logfile = fopen(log_path, "r+"); // Utilise "a+" pour ajouter au fichier sans écraser son contenu
+    if (logfile == NULL) {
+        printf("Erreur lors de l'ouverture du fichier .backup_log\n");
+        return -1; // Retourner une erreur si l'ouverture échoue
+    }
+    while ((entry = readdir(src)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
         char src_path[1024], dest_path[1024];
         snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
         snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
 
         if (stat(src_path, &src_stat) == -1) {
-            printf("Erreur lors de la récupération des informations source");
+            printf("Erreur lors de la récupération des informations source\n");
             continue;
         }
+
         if (S_ISDIR(src_stat.st_mode)) {
             // Gestion des dossiers
             if (stat(dest_path, &dest_stat) == -1) {
                 // Le dossier n'existe pas dans la destination, on le crée
                 if (mkdir(dest_path, 0755) == -1) {
-                    printf("Erreur lors de la création du dossier destination");
+                    printf("Erreur lors de la création du dossier destination\n");
                     continue;
                 }
             }
-            // Synchroniser récursivement
+            // Synchronisation récursive pour les sous-dossiers
             enregistrement(src_path, dest_path);
         } else if (S_ISREG(src_stat.st_mode)) {
             // Gestion des fichiers
-            int diff = are_files_different(src_path, dest_path);
-            switch (diff) {
-                case -1:
-                    remove(dest_path);
-                    break;
-                case 1:
-                    copier_fichier(src_path,dest_path);
-                    break;
-                case 2:
-                    //appeler fonction toto
-                    break;
+            if (stat(dest_path, &dest_stat) == -1) {
+                // Le fichier n'existe pas dans la destination, on le copie
+                copy_file(src_path, dest_path);
+                backup_file(dest_path)
+                //appeler la fonction write_log_element(log_element *elt, FILE *logfile)
+            } else {
+
+                if (src_stat.st_mtime > dest_stat.st_mtime) {
+                    // Fichier source plus récent ou contenu différent
+                    copy_file(src_path, dest_path);
+                    backup_file(dest_path);
+                } else {
+                    // Les fichiers sont identiques
+                    // Rien à faire
+                }
             }
         }
-
     }
+    closedir(src);
+    // Vérification des fichiers dans la destination qui ne sont plus présents dans la source
+    while ((entry = readdir(dest)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        char dest_path[1024], src_path[1024];
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
+        snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
+
+        if (stat(dest_path, &dest_stat) == -1) {
+            printf("Erreur lors de la récupération des informations destination\n");
+            continue;
+        }
+
+        if (S_ISDIR(dest_stat.st_mode)) {
+            // Gestion des dossiers
+            if (stat(src_path, &src_stat) == -1) {
+                // Le dossier n'existe pas dans la destination, on le supprime
+                supprimer_recursivement(dest_path);
+            }
+
+
+            if (stat(src_path, &src_stat) == -1) {
+                // Si le fichier n'existe plus dans la source, on le supprime
+                remove(dest_path);
+            }
+        }
+    }
+    closedir(dest);
+    fclose(log_file);
+
+    // Copie du fichier .backup_log dans le répertoire de sauvegarde
+    char backup_log_dest[1024];
+    snprintf(backup_log_dest, sizeof(backup_log_dest), "%s/.backup_log", dest_dir);
+    copy_file(log_path,
+              backup_log_dest); // Fonction pour copier le fichier de log dans le répertoire de la sauvegarde
+
+    printf("Sauvegarde terminée et .backup_log mis à jour.\n");
+
+    return 0;
 
 }
-
-
 
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
@@ -226,17 +338,19 @@ void create_backup(const char *source_dir, const char *backup_dir) {
         snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
         printf("Copie complète depuis : %s\n", last_backup_path);
         mkdir(backup_path, 0755);
-        restore_backup(last_backup_path, backup_path);
+        copie_backup(last_backup_path, backup_path);
         free(last_backup_name);
     }else{
         // Pas de sauvegarde existante, créer un répertoire vide
         mkdir(backup_path, 0755);
         fopen(strcat(backup_path,"/.backup_log"),"w");
-        // copie repertoire
     }
-    //
-    closedir(src);
-    printf("Sauvegarde incrémentale terminée : %s\n", backup_path);
+
+
+    // Sauvegarder les logs dans le fichier
+    update_backup_log(backup_log_path, &logs);
+
+    closedir(source);
 }
 
 // Fonction permettant d'enregistrer dans fichier le tableau de chunk dédupliqué
