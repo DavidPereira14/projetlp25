@@ -71,7 +71,7 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
             }
             memcpy(chunks[chunk_index].data,buffer,octets_lu); //On copie les données dans le chunk
             memcpy(chunks[chunk_index].md5,md5,MD5_DIGEST_LENGTH); //On copie le MD5 dans la structure
-            add_md5(hash_table,md5,index);//On ajoute le MD5 trouvé dans la table de hachage
+            add_md5(hash_table,md5,);//On ajoute le MD5 trouvé dans la table de hachage
             chunk_index++;//Incrémente l'index des chunks
         }else {
             //Le chunk existe déjà, ainsi pas besoin de le dupliquer

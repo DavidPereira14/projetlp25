@@ -10,6 +10,25 @@
 #include <unistd.h>
 #include <limits.h>
 
+// Fonction pour convertir un MD5 en chaîne hexadécimale
+char* md5_to_string(unsigned char *md5) {
+    static char md5_str[MD5_DIGEST_LENGTH * 2 + 1];
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        sprintf(&md5_str[i * 2], "%02x", md5[i]);
+    }
+    return md5_str;
+}
+
+// Fonction qui vérifie l'éxistance du fichier
+int file_exists(const char *filename) {
+    // Utilise la fonction access pour vérifier si le fichier existe
+    if (access(filename, F_OK) == 0) {
+        return 1;  // Le fichier existe
+    } else {
+        return 0;  // Le fichier n'existe pas
+    }
+}
+
 // Fonction pour vérifier si un répertoire existe et qu'on a les permissions
 int check_directory(const char *path) {
     struct stat path_stat;
@@ -363,11 +382,115 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
 
 // Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
-    /*
-    */
-    printf("\nne fais rien sur le fichier %s\n",filename);
-}
+    // Vérifie si le fichier existe
+    if (!file_exists(filename)) {
+        fprintf(stderr, "Le fichier source n'existe pas : %s\n", filename);
+        return;
+    }
 
+    // Générer un nom de dossier de sauvegarde basé sur la date et l'heure actuelles
+    char backup_folder[100];
+    get_timestamp(backup_folder,100);
+
+    // Crée le répertoire de sauvegarde
+    if (mkdir(backup_folder, 0755) == -1) {
+        perror("Erreur lors de la création du répertoire de sauvegarde");
+        return;
+    }
+
+    // Crée un fichier .backup_log dans le répertoire de sauvegarde
+    char backup_log_path[200];
+    snprintf(backup_log_path, sizeof(backup_log_path), "%s/.backup_log", backup_folder);
+    FILE *log_file = fopen(backup_log_path, "a");
+    if (!log_file) {
+        perror("Erreur lors de la création du fichier de log");
+        return;
+    }
+
+    // Initialisation de la table de hachage pour la déduplication
+    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};
+
+    // Ouvre le fichier source pour la lecture
+    FILE *source_file = fopen(filename, "rb");
+    if (!source_file) {
+        perror("Erreur lors de l'ouverture du fichier source");
+        fclose(log_file);
+        return;
+    }
+
+    // Crée un tableau pour stocker les chunks du fichier
+    Chunk *chunks = NULL;
+    int chunk_count = 0;
+
+    // Appel de la fonction de déduplication sur le fichier source
+    deduplicate_file(source_file, chunks, hash_table);
+
+    // Traitement des chunks dédupliqués et sauvegarde
+    for (int i = 0; i < chunk_count; i++) {
+        // Vérification si ce chunk existe déjà dans la sauvegarde (via la table de hachage)
+        unsigned char md5[MD5_DIGEST_LENGTH];
+        compute_md5(chunks[i].data, CHUNK_SIZE, md5);
+
+        // Recherche du chunk dans la table de hachage
+        int existing_index = find_md5(hash_table, md5);
+        if (existing_index == -1) {
+            // Si le chunk est unique, on l'ajoute à la sauvegarde
+            printf("Ajout du chunk %d à la sauvegarde.\n", i);
+
+            // Nom du fichier pour le chunk basé sur son MD5
+            char chunk_file_path[200];
+            snprintf(chunk_file_path, sizeof(chunk_file_path), "%s/%s.chunk", backup_folder, md5_to_string(md5));
+
+            // Ouvre le fichier pour écrire les données du chunk
+            FILE *chunk_file = fopen(chunk_file_path, "wb");
+            if (!chunk_file) {
+                perror("Erreur lors de l'ouverture du fichier de chunk");
+                continue;  // Passe au chunk suivant
+            }
+
+            // Écrit les données du chunk dans le fichier
+            size_t written = fwrite(chunks[i].data, 1, CHUNK_SIZE, chunk_file);
+            if (written != CHUNK_SIZE) {
+                perror("Erreur lors de l'écriture du chunk dans le fichier");
+            }
+
+            fclose(chunk_file);  // Ferme le fichier de chunk
+
+            // Crée un nouvel élément de log
+            log_element *new_log = malloc(sizeof(log_element));
+            if (!new_log) {
+                perror("Erreur d'allocation mémoire pour le log");
+                continue;
+            }
+
+            // Remplir le nouvel élément de log
+            new_log->path = strdup(chunk_file_path);
+            new_log->date = strdup(backup_folder);  // Utilisation de l'heure comme identifiant
+            memcpy(new_log->md5, md5, MD5_DIGEST_LENGTH);
+
+            // Écrire l'élément de log dans le fichier
+            write_log_element(new_log, log_file);
+
+            // Libère la mémoire allouée pour le log
+            free(new_log->path);
+            free(new_log->date);
+            free(new_log);
+        } else {
+            printf("Le chunk %d existe déjà avec l'index %d. Pas de sauvegarde nécessaire.\n", i, existing_index);
+        }
+    }
+
+    // Libération de la mémoire allouée pour les chunks
+    for (int i = 0; i < chunk_count; i++) {
+        free(chunks[i].data);
+    }
+
+    free(chunks);
+    fclose(source_file);
+    fclose(log_file);
+
+    printf("Sauvegarde terminée.\n");
+}
 
 // Fonction permettant la restauration du fichier backup via le tableau de chunk
 // Fonction pour restaurer un fichier à partir des chunks dédupliqués
