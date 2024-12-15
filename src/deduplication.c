@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/md5.h>
 #include <dirent.h>
 
