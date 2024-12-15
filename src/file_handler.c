@@ -180,3 +180,30 @@ void list_files(const char *path){
     perror("Erreur lors de la fermeture du répertoire");
   }
 }
+void copy_file(const char *src, const char *dest) {
+    FILE *src_f = fopen(src, "rb");  // Ouvre le fichier source en mode binaire
+    if (src_f == NULL) {
+        perror("Erreur d'ouverture du fichier source");
+        return;
+    }
+
+    FILE *dest_f = fopen(dest, "wb");  // Ouvre le fichier destination en mode binaire
+    if (dest_f == NULL) {
+        perror("Erreur d'ouverture du fichier destination");
+        fclose(src_f);
+        return;
+    }
+
+    char buffer[4096];  // Buffer pour lire et écrire des données
+    size_t bytes_read;
+
+    // Lire et copier le contenu du fichier source dans le fichier destination
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), src_f)) > 0) {
+        fwrite(buffer, 1, bytes_read, dest_f);
+    }
+
+    printf("Le fichier '%s' a été copié vers '%s'.\n", src, dest);
+
+    fclose(src_f);  // Ferme le fichier source
+    fclose(dest_f);  // Ferme le fichier destination
+}

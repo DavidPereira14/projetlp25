@@ -7,6 +7,7 @@
     <option name="/Default/RiderDebugger/RiderRestoreDecompile/RestoreDecompileSetting/@EntryValue" value="false" type="bool" />
     <option name="/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue" value="true" type="bool" />
     <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexRemoved" />
   </component>
   <component name="CMakeProjectFlavorService">
     <option name="flavorId" value="CMakePlainProjectFlavor" />
@@ -23,7 +24,11 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="" />
+    <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backup_manager.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/deduplication.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/deduplication.c" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -86,6 +91,7 @@
     &quot;RunOnceActivity.RadMigrateCodeStyle&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
@@ -106,7 +112,16 @@
     ]
   }
 }</component>
+<<<<<<< HEAD
   <component name="RunManager" selected="Makefile Application.lp25_borgbackup">
+=======
+  <component name="RunManager" selected="Native Application.all">
+>>>>>>> 1a408e18856c5ec54974207aa740cb8a642d114a
+    <configuration name="all" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="workspace.xml" TARGET_NAME="all" CONFIG_NAME="all" version="1">
+      <method v="2">
+        <option name="CLION.COMPOUND.BUILD" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="all" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="workspace.xml" TARGET_NAME="all" CONFIG_NAME="all" version="1">
       <method v="2">
         <option name="CLION.COMPOUND.BUILD" enabled="true" />
@@ -117,9 +132,14 @@
         <option name="CLION.COMPOUND.BUILD" enabled="true" />
       </method>
     </configuration>
+    <configuration name="lp25_borgbackup" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="workspace.xml" TARGET_NAME="lp25_borgbackup" CONFIG_NAME="lp25_borgbackup" version="1">
+      <method v="2">
+        <option name="CLION.COMPOUND.BUILD" enabled="true" />
+      </method>
+    </configuration>
     <list>
-      <item itemvalue="Makefile Application.all" />
-      <item itemvalue="Makefile Application.lp25_borgbackup" />
+      <item itemvalue="Native Application.all" />
+      <item itemvalue="Native Application.lp25_borgbackup" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -148,8 +168,13 @@
       <workItem from="1734091627656" duration="3504000" />
       <workItem from="1734109029367" duration="3568000" />
       <workItem from="1734171330888" duration="2769000" />
+<<<<<<< HEAD
       <workItem from="1734174212428" duration="2426000" />
       <workItem from="1734209617186" duration="698000" />
+=======
+      <workItem from="1734175795258" duration="846000" />
+      <workItem from="1734176846097" duration="9363000" />
+>>>>>>> 1a408e18856c5ec54974207aa740cb8a642d114a
     </task>
     <servers />
   </component>
