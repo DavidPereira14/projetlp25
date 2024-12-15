@@ -6,10 +6,6 @@
 #include "deduplication.h"
 #include "backup_manager.h"
 #include "network.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
 
 void print_usage(const char *prog_name) {
@@ -110,15 +106,15 @@ int main(int argc, char *argv[]) {
         printf("Exécution d'une sauvegarde...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        // Appeler votre fonction de sauvegarde ici
+        create_backup(source,dest);
     } else if (restore) {
         printf("Restauration en cours...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        // Appeler votre fonction de restauration ici
+        restore_backup(source,dest);
     } else if (list_backups) {
         printf("Liste des sauvegardes...\n");
-        // Appeler votre fonction de liste des sauvegardes ici
+        list_backups(source);
     } else {
         fprintf(stderr, "Erreur : Aucune action spécifiée.\n");
         print_usage(argv[0]);
