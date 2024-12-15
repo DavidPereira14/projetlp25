@@ -156,7 +156,7 @@ void write_log_element(log_element *elt, FILE *logfile) {
 
     fprintf(logfile, "%s;%s;%s\n", elt->path, elt->date, md5_str);
 }
-}
+
 
 
 void list_files(const char *path){
