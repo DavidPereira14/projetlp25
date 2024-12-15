@@ -10,14 +10,6 @@
 #include <unistd.h>
 #include <limits.h>
 
-// Fonction pour convertir un MD5 en chaîne hexadécimale
-char* md5_to_string(unsigned char *md5) {
-    static char md5_str[MD5_DIGEST_LENGTH * 2 + 1];
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        sprintf(&md5_str[i * 2], "%02x", md5[i]);
-    }
-    return md5_str;
-}
 
 // Fonction qui vérifie l'éxistance du fichier
 int file_exists(const char *filename) {
@@ -172,7 +164,6 @@ void get_timestamp(char *buffer, size_t size) {
              ts.tv_nsec / 1000000);
 }
 
-
 void copie_backup(const char *backup_id, const char *restore_dir) {
     DIR *src;
     struct dirent *entry;
@@ -205,7 +196,7 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
 
         if (S_ISDIR(src_stat.st_mode)) {
             // Créer le sous-répertoire dans la destination
-            mkdir(dest_path);
+            mkdir(dest_path,0755);
             copie_backup(src_path, dest_path);
         } else {
             // Créer un lien dur vers le fichier source
@@ -357,12 +348,12 @@ void create_backup(const char *source_dir, const char *backup_dir) {
         char last_backup_path[1024];
         snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
         printf("Copie complète depuis : %s\n", last_backup_path);
-        mkdir(backup_path);
+        mkdir(backup_path,0755);
         copie_backup(last_backup_path, backup_path);
         free(last_backup_name);
     }else{
         // Pas de sauvegarde existante, créer un répertoire vide
-        mkdir(backup_path);
+        mkdir(backup_path,0755);
         fopen(strcat(backup_path,"/.backup_log"),"w");
     }
     log_t logs=read_backup_log(backup_path);
