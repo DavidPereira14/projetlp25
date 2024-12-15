@@ -254,7 +254,7 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             // Gestion des dossiers
             if (stat(dest_path, &dest_stat) == -1) {
                 // Le dossier n'existe pas dans la destination, on le crée
-                if (mkdir(dest_path) == -1) {
+                if (mkdir(dest_path,0755) == -1) {
                     printf("Erreur lors de la création du dossier destination\n");
                     continue;
                 }
