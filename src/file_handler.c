@@ -155,7 +155,6 @@ void write_log_element(log_element *elt, FILE *logfile) {
     fprintf(logfile, "%s;%s;%s\n", elt->path, elt->date, md5_str);
 }
 
-
 void list_files(const char *path){
   /* Implémenter la logique pour lister les fichiers présents dans un répertoire
   */
@@ -180,6 +179,7 @@ void list_files(const char *path){
     perror("Erreur lors de la fermeture du répertoire");
   }
 }
+
 void copy_file(const char *src, const char *dest) {
     FILE *src_f = fopen(src, "rb");  // Ouvre le fichier source en mode binaire
     if (src_f == NULL) {
