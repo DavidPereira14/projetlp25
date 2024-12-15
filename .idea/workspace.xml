@@ -26,8 +26,9 @@
   <component name="ChangeListManager">
     <list default="true" id="b1cc5d2a-3024-4867-9eef-c41a419548b4" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backup_manager.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/deduplication.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/deduplication.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backup_manager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/backup_manager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/file_handler.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/file_handler.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/file_handler.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/file_handler.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -155,7 +156,7 @@
       <workItem from="1734171330888" duration="2769000" />
       <workItem from="1734174212428" duration="2426000" />
       <workItem from="1734209617186" duration="698000" />
-      <workItem from="1734273214067" duration="1829000" />
+      <workItem from="1734273214067" duration="3411000" />
     </task>
     <servers />
   </component>

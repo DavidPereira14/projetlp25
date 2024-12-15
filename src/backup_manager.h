@@ -23,4 +23,4 @@ void write_restored_file(const char *output_filename, Chunk *chunks, int chunk_c
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
 void list_backups(const char *backup_dir);
 
-#endif // BACKUP_MANAGER_H
+#endif // BACKUP_MANAGqER_H
