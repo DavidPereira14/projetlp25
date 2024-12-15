@@ -6,6 +6,31 @@
 #include <openssl/md5.h>
 #include <dirent.h>
 
+
+// Fonction pour calculer le MD5 du fichier complet en utilisant compute_md5
+void compute_file_md5(FILE *file, unsigned char *md5_out) {
+    MD5_CTX md5_ctx;
+    unsigned char buffer[CHUNK_SIZE];
+    unsigned char chunk_md5[MD5_DIGEST_LENGTH];
+    size_t bytes_read;
+
+    // Initialiser le contexte MD5
+    MD5_Init(&md5_ctx);
+
+    // Lire le fichier par chunks et calculer le MD5 de chaque chunk
+    while ((bytes_read = fread(buffer, 1, CHUNK_SIZE, file)) > 0) {
+        // Calculer le MD5 du chunk actuel
+        compute_md5(buffer, bytes_read, chunk_md5);
+
+        // Mettre à jour le MD5 global avec le MD5 du chunk
+        MD5_Update(&md5_ctx, chunk_md5, MD5_DIGEST_LENGTH);
+    }
+
+    // Finaliser le calcul du MD5
+    MD5_Final(md5_out, &md5_ctx);
+}
+
+
 // Fonction de hachage MD5 pour l'indexation
 // dans la table de hachage
 unsigned int hash_md5(unsigned char *md5) {
