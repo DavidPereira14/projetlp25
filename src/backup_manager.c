@@ -189,14 +189,17 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-        // Ignorer le fichier spécifique ".backup_log"
-        if (strcmp(entry->d_name, ".backup_log") == 0) {
-            continue;
-        }
+
 
         char src_path[1024], dest_path[1024];
         snprintf(src_path, sizeof(src_path), "%s/%s", backup_id, entry->d_name);
         snprintf(dest_path, sizeof(dest_path), "%s/%s", restore_dir, entry->d_name);
+
+        // copier le fichier spécifique ".backup_log"
+        if (strcmp(entry->d_name, ".backup_log") == 0) {
+            copy_file(src_path,dest_path);
+            continue;
+        }
 
         if (stat(src_path, &src_stat) == -1) {
             perror("Erreur lors de la récupération des informations sur le fichier source");
@@ -365,6 +368,7 @@ void create_backup(const char *source_dir, const char *backup_dir) {
         mkdir(backup_path);
         fopen(strcat(backup_path,"/.backup_log"),"w");
     }
+    enregistrement(source_dir,backup_dir);
     log_t logs=read_backup_log(backup_path);
     // Sauvegarder les logs dans le fichier
     update_backup_log(backup_path, &logs);
