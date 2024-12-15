@@ -267,7 +267,13 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
                 // Le fichier n'existe pas dans la destination, on le copie
                 copy_file(src_path, dest_path);
                 backup_file(dest_path);
-                //appeler la fonction write_log_element(log_element *elt, FILE *logfile)
+                FILE *new_fichier= fopen(dest_path, "rb");
+                unsigned char md5_out[MD5_DIGEST_LENGTH];  // Stocker le MD5 du fichier
+                compute_file_md5(new_fichier, md5_out);
+                log_element log_new_fichier ;
+                log_new_fichier.path=dest_path;
+                memcpy(log_new_fichier.md5, md5_out, MD5_DIGEST_LENGTH);
+                log_new_fichier.date=ctime(&dest_stat.st_mtime);
             } else {
 
                 if (src_stat.st_mtime > dest_stat.st_mtime) {
