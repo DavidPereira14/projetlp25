@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/md5.h>
 #include <dirent.h>
 
@@ -27,7 +26,7 @@ typedef struct {
     int index;
 } Md5Entry;
 
-
+void compute_file_md5(FILE *file, unsigned char *md5_out);
 // Fonction de hachage MD5 pour l'indexation dans la table de hachage
 unsigned int hash_md5(unsigned char *md5);
 // Fonction pour calculer le MD5 d'un chunk
