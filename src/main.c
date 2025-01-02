@@ -7,7 +7,7 @@
 #include "backup_manager.h"
 #include "network.h"
 #include <stdbool.h>
-
+/*
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
     printf("Options :\n");
@@ -125,3 +125,10 @@ int main(int argc, char *argv[]) {
 }
 
 
+*/
+
+int main(int argc, char *argv[]) {
+    if (argc>2){
+        create_backup(argv[1],argv[2]);
+    }
+}
