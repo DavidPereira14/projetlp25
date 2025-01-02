@@ -106,15 +106,15 @@ int main(int argc, char *argv[]) {
         printf("Exécution d'une sauvegarde...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        create_backup(source,dest);
+        // Appeler votre fonction de sauvegarde ici
     } else if (restore) {
         printf("Restauration en cours...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        restore_backup(source,dest);
+        // Appeler votre fonction de restauration ici
     } else if (list_backups) {
         printf("Liste des sauvegardes...\n");
-        list_backups(source);
+        // Appeler votre fonction de liste des sauvegardes ici
     } else {
         fprintf(stderr, "Erreur : Aucune action spécifiée.\n");
         print_usage(argv[0]);
