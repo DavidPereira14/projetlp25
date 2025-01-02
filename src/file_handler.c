@@ -5,10 +5,9 @@
 #include <dirent.h>
 #include "file_handler.h"
 #include "deduplication.h"
-#include <unistd.h>
 
 // Fonction permettant de lire un élément du fichier .backup_log
-log_t read_backup_log(const char *logfile) {
+log_t read_backup_log(const char *logfile){
     /* Implémenter la logique pour la lecture d'une ligne du fichier ".backup_log"
     * @param: logfile - le chemin vers le fichier .backup_log
     * @return: une structure log_t
@@ -19,10 +18,13 @@ log_t read_backup_log(const char *logfile) {
         exit(EXIT_FAILURE); // Quitte en cas d'erreur d'ouverture
     }
 
-    log_t log_list = { NULL, NULL }; // Initialise une liste vide
+    // Initialise une liste vide pour stocker les logs
+    log_t log_list = { NULL, NULL };
 
-    char line[1024]; // Tableau pour stocker chaque ligne du fichier
+    char line[1024];  // Tableau pour stocker chaque ligne du fichier
+
     while (fgets(line, sizeof(line), file)) {
+        // Crée un nouvel élément pour la liste chaînée
         log_element *new_element = malloc(sizeof(log_element));
         if (!new_element) {
             perror("Erreur d'allocation mémoire");
@@ -30,59 +32,43 @@ log_t read_backup_log(const char *logfile) {
             exit(EXIT_FAILURE);
         }
 
-        // Parse la ligne
+        // Parse la ligne en utilisant strtok pour extraire les données
         char *path = strtok(line, ";");
         char *time = strtok(NULL, ";");
-        char *md5_str = strtok(NULL, "\n");
+        char *md5_str = strtok(NULL, "\n");  // "\n" pour ignorer la fin de ligne
 
         if (!path || !time || !md5_str) {
-            fprintf(stderr, "Erreur lors de l'analyse d'une ligne de log\n");
-            free(new_element);
+            perror("Erreur lors de la récupération des données");
+            free(new_element); // Libère l'élément en cas d'erreur
             fclose(file);
             exit(EXIT_FAILURE);
         }
 
-        // Allocation sécurisée pour les données
-        new_element->path = strdup(path);
-        if (!new_element->path) {
-            perror("Erreur d'allocation mémoire pour path");
-            free(new_element);
-            fclose(file);
-            exit(EXIT_FAILURE);
-        }
-
+        // Remplir l'élément avec les valeurs extraites
+        new_element->path = strdup(path);  // Duplication pour éviter les problèmes de gestion de mémoire
         new_element->date = strdup(time);
-        if (!new_element->date) {
-            perror("Erreur d'allocation mémoire pour date");
-            free((void *)new_element->path);
-            free(new_element);
-            fclose(file);
-            exit(EXIT_FAILURE);
-        }
 
         // Convertir la chaîne MD5 en tableau d'octets
         for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
             sscanf(md5_str + (i * 2), "%2hhx", &new_element->md5[i]);
         }
 
-        // Initialisation des pointeurs de l'élément
-        new_element->next = NULL;        // Le nouvel élément n'a pas encore de suivant
-        new_element->prev = log_list.tail; // Le précédent élément est le dernier de la liste actuelle
+        // Ajout de l'élément à la liste chaînée
+        new_element->next = NULL;
+        new_element->prev = log_list.tail;
 
-        // Mise à jour de la liste chaînée
         if (log_list.tail) {
-            log_list.tail->next = new_element; // Relier l'ancien dernier élément au nouvel élément
+            log_list.tail->next = new_element;  // Relie le précédent élément
         }
-        log_list.tail = new_element; // Le nouvel élément devient le dernier de la liste
+        log_list.tail = new_element;  // Le nouvel élément devient le dernier
 
-        // Si la liste était vide, le nouvel élément devient aussi le premier
         if (log_list.head == NULL) {
-            log_list.head = new_element;
+            log_list.head = new_element;  // Si la liste était vide, le nouvel élément est aussi le premier
         }
     }
 
     fclose(file);
-    return log_list;
+    return log_list;  // Retourne la liste chaînée remplie
 }
 
 // Fonction permettant de mettre à jour une ligne du fichier .backup_log
@@ -92,24 +78,35 @@ void update_backup_log(const char *logfile, log_t *logs) {
      *         logs - la liste de toutes les lignes du fichier .backup_log sauvegardée dans une structure log_t
      */
 
+    // Ouvre le fichier .backup_log en mode lecture
     FILE *file = fopen(logfile, "r");
     if (!file) {
         perror("Erreur lors de l'ouverture du fichier");
         return;
     }
 
-    char *lines[1024];
+    // Stocke toutes les lignes valides
+    char *lines[1024];  // Tableau pour stocker les lignes du fichier
     int line_count = 0;
-    char line[1024];
+    char line[1024];     // Buffer pour lire chaque ligne du fichier
+    long position;       // Pour stocker la position de chaque ligne
 
-    // Parcours des lignes pour vérifier leur validité
+    // Parcours du fichier et stockage des lignes valides
     while (fgets(line, sizeof(line), file)) {
+        position = ftell(file);  // Position actuelle dans le fichier
+
+        // Extraire le chemin du fichier de chaque ligne
         char *path_in_file = strtok(line, ";");
 
-        if (path_in_file && access(path_in_file, F_OK) == -1) {
-            continue; // Ignorer si le fichier n'existe pas
+        if (path_in_file) {
+            // Vérifie si le fichier existe encore
+            if (access(path_in_file, F_OK) == -1) {
+                // Si le fichier n'existe plus, on ne conserve pas cette ligne
+                continue;
+            }
         }
 
+        // Si le fichier existe, on conserve la ligne
         lines[line_count] = strdup(line);
         if (!lines[line_count]) {
             perror("Erreur d'allocation mémoire");
@@ -118,24 +115,23 @@ void update_backup_log(const char *logfile, log_t *logs) {
         }
         line_count++;
     }
-    fclose(file);
 
-    // Réécriture du fichier
+    fclose(file);  // Ferme le fichier après la lecture
+
+    // Ouvre à nouveau le fichier en mode écriture pour le réécrire sans les lignes obsolètes
     file = fopen(logfile, "w");
     if (!file) {
         perror("Erreur lors de l'ouverture du fichier en écriture");
-        for (int i = 0; i < line_count; i++) {
-            free(lines[i]);
-        }
         return;
     }
 
+    // Réécriture du fichier avec les lignes valides
     for (int i = 0; i < line_count; i++) {
         fprintf(file, "%s", lines[i]);
-        free(lines[i]);
+        free(lines[i]);  // Libère la mémoire allouée pour la ligne
     }
 
-    fclose(file);
+    fclose(file);  // Ferme le fichier après la réécriture
 }
 
 void write_log_element(log_element *elt, FILE *logfile) {
@@ -144,20 +140,20 @@ void write_log_element(log_element *elt, FILE *logfile) {
      *         logfile - un pointeur vers le fichier ouvert
      */
 
-    if (!logfile) {
+    if (logfile == NULL) {
         perror("Le fichier est NULL");
-        return;
+        return;  // Quitter si le fichier est NULL
     }
 
-    char md5_str[MD5_DIGEST_LENGTH * 2 + 1];
+    // Convertir le tableau MD5 en chaîne hexadécimale
+    char md5_str[MD5_DIGEST_LENGTH * 2 + 1];  // Taille pour la chaîne hex (16 octets -> 32 caractères + '\0')
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
         sprintf(&md5_str[i * 2], "%02x", elt->md5[i]);
     }
 
+    // Écrit l'élément dans le fichier et ajoute un saut de ligne
     fprintf(logfile, "%s;%s;%s\n", elt->path, elt->date, md5_str);
 }
-
-
 
 void list_files(const char *path){
   /* Implémenter la logique pour lister les fichiers présents dans un répertoire
@@ -183,6 +179,7 @@ void list_files(const char *path){
     perror("Erreur lors de la fermeture du répertoire");
   }
 }
+
 void copy_file(const char *src, const char *dest) {
     FILE *src_f = fopen(src, "rb");  // Ouvre le fichier source en mode binaire
     if (src_f == NULL) {
