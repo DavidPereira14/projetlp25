@@ -94,7 +94,6 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
 
 // Fonction permettant de charger un fichier dédupliqué en table de chunks
 // en remplaçant les références par les données correspondantes
-
 void undeduplicate_file(FILE *file, Chunk **chunks, int *chunk_count) {
     /* @param: file est le nom du fichier dédupliqué présent dans le répertoire de sauvegarde
     *           chunks représente le tableau de chunk qui contiendra les chunks restauré depuis filename

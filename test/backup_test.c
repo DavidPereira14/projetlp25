@@ -10,7 +10,7 @@
 
 #define CHUNK_SIZE 1024
 #define HASH_TABLE_SIZE 100
-#define MD5_DIGEST_LENGTH 16
+#define MD5_DIGEST_LENGTH 16  //ahgagaglkaghlakghlaglkha
 
 // Structure pour stocker les chunks
 typedef struct {
