@@ -61,7 +61,7 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
         //On calcule le MD5 du chunck lu
         compute_md5(buffer,octets_lu,md5);
 
-        //Verification que ce MD5 est dans la table de hachage
+        //Verification que ce MD5 est dans la table de hachage, Si le MD5 n'existe pas encore, l'ajouter à la table de hachage et au tableau de chunks
         int existing_index = find_md5(hash_table,md5);
         if (existing_index == -1) {
             chunks[chunk_index].data = malloc(octets_lu);
