@@ -548,6 +548,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         return;
     }
 
+    // Construction du chemin de sauvegarde
     char backup_path[4096];
     snprintf(backup_path, sizeof(backup_path), "%s/%s", restore_dir, backup_id);
 
@@ -574,44 +575,75 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     if (!restore_dir) {
         if (!getcwd(default_dest, sizeof(default_dest))) {
             perror("Impossible de déterminer le répertoire courant");
-            free(&logs);
+            free(logs.head);  // Libérer la mémoire allouée pour les logs
             return;
         }
         restore_dir = default_dest;
     }
 
-    // Ouvrir le fichier pour écrire les chunks restaurés
-    char restore_file_path[4096];
-    snprintf(restore_file_path, sizeof(restore_file_path), "%s/restore_file.dat", restore_dir);
+    // Parcours des fichiers de log pour effectuer la restauration
+    while (current) {
+        // Construction du chemin du fichier restauré
+        char restore_file_path[4096];
+        snprintf(restore_file_path, sizeof(restore_file_path), "%s/%s", restore_dir, current->path);
 
-    // Ouvrir le fichier dédupliqué
-    FILE *file = fopen(restore_file_path, "rb");
-    if (!file) {
-        perror("Erreur lors de l'ouverture du fichier dédupliqué");
-        return;
+        // Vérifier si le fichier existe déjà dans le répertoire de destination
+        struct stat dest_file_stat;
+        int file_exists = stat(restore_file_path, &dest_file_stat) == 0;
+
+        if (file_exists) {
+            // Comparer la date de modification et la taille des fichiers
+            struct stat source_file_stat;
+            char backup_file_path[4096];
+            snprintf(backup_file_path, sizeof(backup_file_path), "%s/%s", backup_path, current->path);
+
+            if (stat(backup_file_path, &source_file_stat) == -1) {
+                perror("Erreur lors de l'accès au fichier de sauvegarde");
+                current = current->next;
+                continue;
+            }
+
+            // Si la date de modification ou la taille diffère, remplacer le fichier
+            if (source_file_stat.st_mtime > dest_file_stat.st_mtime || source_file_stat.st_size != dest_file_stat.st_size) {
+                printf("Remplacement du fichier : %s\n", restore_file_path);
+                copy_file(backup_file_path, restore_file_path);
+            } else {
+                printf("Le fichier %s est à jour, il n'a pas été modifié.\n", restore_file_path);
+            }
+        } else {
+            // Si le fichier n'existe pas dans le répertoire de destination, effectuer la restauration
+            printf("Restaurer le fichier : %s\n", restore_file_path);
+            char backup_file_path[4096];
+            snprintf(backup_file_path, sizeof(backup_file_path), "%s/%s", backup_path, current->path);
+
+            // Ouvrir le fichier de sauvegarde et effectuer la restauration
+            FILE *file = fopen(backup_file_path, "rb");
+            if (!file) {
+                perror("Erreur lors de l'ouverture du fichier de sauvegarde");
+                current = current->next;
+                continue;
+            }
+
+            // Récupérer les chunks et restaurer le fichier
+            Chunk *chunks = NULL;
+            int chunk_count = 0;
+            undeduplicate_file(file, &chunks, &chunk_count);
+
+            // Écrire le fichier restauré
+            write_restored_file(restore_file_path, chunks, chunk_count);
+
+            // Fermer le fichier et libérer les ressources
+            fclose(file);
+            free(chunks);
+        }
+
+        current = current->next;
     }
 
-    // Table de hachage pour les chunks et tableau pour les chunks
-    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};
-    Chunk *chunks = NULL;
-    int chunk_count = 0;
-
-    // Restauration des chunks (en dédupliquant les données)
-    undeduplicate_file(file, &chunks, &chunk_count);
-
-    // Écrire le fichier restauré à partir des chunks dédupliqués
-    write_restored_file(restore_file_path, chunks, chunk_count);
-
-    // Fermer le fichier et libérer la mémoire
-    fclose(file);
-    free(chunks);
-
     // Libérer la mémoire allouée pour les logs
-    free(&logs);
-
+    free(logs.head);
     printf("Restauration terminée dans le répertoire '%s'\n", restore_dir);
 }
-
 
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
 void list_backups(const char *backup_dir){
