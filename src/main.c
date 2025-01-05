@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
         if (verbose){
             gettimeofday(&start, NULL); // Début du chronométrage
         }
-        restore_backup(source,dest);
+        restore_backup(source,dest);  //backup_id : source ; dest : restore_dir
         if (verbose){
             gettimeofday(&end, NULL);   // Fin du chronométrage
             // Calcul de la durée
