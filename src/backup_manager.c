@@ -355,7 +355,15 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
 
     // Parcourir tous les chunks et écrire leurs données dans le fichier
     for (int i = 0; i < chunk_count; i++) {
-        size_t data_size = CHUNK_SIZE;
+        size_t data_size = strlen((char *)chunks[i].data);  // Taille réelle des données dans ce chunk
+
+        // Écrire le MD5 suivi des données du chunk
+        if (fwrite(chunks[i].md5, 1, MD5_DIGEST_LENGTH, output_file) != MD5_DIGEST_LENGTH) {
+            perror("Erreur d'écriture du MD5 dans le fichier");
+            fclose(output_file);
+            return;
+        }
+
         if (fwrite(chunks[i].data, 1, data_size, output_file) != data_size) {
             perror("Erreur d'écriture dans le fichier");
             fclose(output_file);

@@ -258,4 +258,40 @@ int main() {
 
     return 0;
 }
+
+//Test write_backup_file
+int main() {
+    // Créer quelques chunks avec des données fictives
+    int chunk_count = 3;
+    Chunk *chunks = malloc(sizeof(Chunk) * chunk_count);
+
+    char *data1 = "Ceci est un chunk de test numéro 1.";
+    char *data2 = "Ceci est un chunk de test numéro 2.";
+    char *data3 = "Ceci est un chunk de test numéro 3.";
+
+    // Calcul du MD5 pour chaque chunk et affectation des données
+    compute_md5(data1, strlen(data1), chunks[0].md5);
+    chunks[0].data = malloc(strlen(data1) + 1);
+    strcpy((char *)chunks[0].data, data1);
+
+    compute_md5(data2, strlen(data2), chunks[1].md5);
+    chunks[1].data = malloc(strlen(data2) + 1);
+    strcpy((char *)chunks[1].data, data2);
+
+    compute_md5(data3, strlen(data3), chunks[2].md5);
+    chunks[2].data = malloc(strlen(data3) + 1);
+    strcpy((char *)chunks[2].data, data3);
+
+    // Appeler la fonction pour sauvegarder les chunks dans un fichier
+    const char *output_filename = "backupdedup";
+    write_backup_file(output_filename, chunks, chunk_count);
+
+    // Libérer la mémoire
+    for (int i = 0; i < chunk_count; i++) {
+        free(chunks[i].data);
+    }
+    free(chunks);
+
+    return 0;
+}
  */
