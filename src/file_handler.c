@@ -133,7 +133,7 @@ void update_backup_log(const char *logfile, log_t *logs) {
 
     // Réécriture du fichier avec les lignes valides
     for (int i = 0; i < line_count; i++) {
-        fprintf(file, "%s", lines[i]);
+        fprintf(file, "%s\n", lines[i]);
         free(lines[i]);  // Libère la mémoire allouée pour la ligne
     }
 
