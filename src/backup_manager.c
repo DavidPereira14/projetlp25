@@ -303,45 +303,46 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
 
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
-    DIR *src;
-    struct dirent *entry;
-    struct stat src_stat, dest_stat;
-    if (check_directory(source_dir)==-1){
-        printf("Erreur : vérifier le repertoire source (existance,permission)");
+    if (check_directory(source_dir) == -1) {
+        printf("Erreur : vérifier le répertoire source (existance, permission)\n");
         return;
     }
-    if (check_directory(backup_dir)==-1){
-        printf("Erreur : vérifier le repertoire backup (existance,permission)");
+    if (check_directory(backup_dir) == -1) {
+        printf("Erreur : vérifier le répertoire backup (existance, permission)\n");
         return;
     }
-    // Obtenir l'horodatage pour le répertoire de sauvegarde
+
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
     char backup_path[1024];
     snprintf(backup_path, sizeof(backup_path), "%s/%s", backup_dir, timestamp);
+
     char *last_backup_name = find_last_backup(backup_dir);
     char backup_log[4096];
-    snprintf(backup_log,sizeof(backup_log),"%s/.backup_log",backup_path);
-    if (last_backup_name){
-        printf("nsgnls\n");
+    snprintf(backup_log, sizeof(backup_log), "%s/.backup_log", backup_path);
+
+    if (last_backup_name) {
+        printf("Copie complète depuis : %s\n", last_backup_name);
         char last_backup_path[1024];
         snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
-        printf("Copie complète depuis : %s\n", last_backup_path);
-        mkdir(backup_path,0755);
+        mkdir(backup_path, 0755);
         copie_backup(last_backup_path, backup_path);
         free(last_backup_name);
-    }else{
-        // Pas de sauvegarde existante, créer un répertoire vide
-        mkdir(backup_path,0755);
+    } else {
+        mkdir(backup_path, 0755);
         printf("1");
-        fopen(backup_log,"w");
+        fopen(backup_log, "w");
         printf("2");
     }
-    enregistrement(source_dir,backup_path);
-    log_t logs=read_backup_log(backup_path);
-    // Sauvegarder les logs dans le fichier
-    //update_backup_log(backup_log, &logs);
 
+
+    enregistrement(source_dir, backup_path);
+
+    // Ici, vous devez lire les logs du fichier .backup_log
+    log_t logs = read_backup_log(backup_path);
+
+    // Après avoir mis à jour logs, vous pouvez appeler update_backup_log pour mettre à jour le fichier
+    update_backup_log(backup_log, &logs);
 }
 
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué

@@ -88,12 +88,13 @@ void update_backup_log(const char *logfile, log_t *logs) {
     // Stocke toutes les lignes valides
     char *lines[1024];  // Tableau pour stocker les lignes du fichier
     int line_count = 0;
-    char line[1024];     // Buffer pour lire chaque ligne du fichier
+    char line[1024];     // Buffer pour lire chaque ligne
     long position;       // Pour stocker la position de chaque ligne
 
     // Parcours du fichier et stockage des lignes valides
     while (fgets(line, sizeof(line), file)) {
         position = ftell(file);  // Position actuelle dans le fichier
+        printf("Ligne lue : %s", line);  // Afficher la ligne lue pour le débogage
 
         // Extraire le chemin du fichier de chaque ligne
         char *path_in_file = strtok(line, ";");
@@ -101,8 +102,8 @@ void update_backup_log(const char *logfile, log_t *logs) {
         if (path_in_file) {
             // Vérifie si le fichier existe encore
             if (access(path_in_file, F_OK) == -1) {
-                // Si le fichier n'existe plus, on ne conserve pas cette ligne
-                continue;
+                printf("Le fichier %s n'existe plus, ligne ignorée.\n", path_in_file);
+                continue;  // Si le fichier n'existe plus, on ne conserve pas cette ligne
             }
         }
 
@@ -117,6 +118,12 @@ void update_backup_log(const char *logfile, log_t *logs) {
     }
 
     fclose(file);  // Ferme le fichier après la lecture
+
+    // Afficher les lignes valides collectées
+    printf("Nombre de lignes valides collectées : %d\n", line_count);
+    for (int i = 0; i < line_count; i++) {
+        printf("Ligne à écrire : %s", lines[i]);
+    }
 
     // Ouvre à nouveau le fichier en mode écriture pour le réécrire sans les lignes obsolètes
     file = fopen(logfile, "w");
@@ -135,11 +142,6 @@ void update_backup_log(const char *logfile, log_t *logs) {
 }
 
 void write_log_element(log_element *elt, FILE *logfile) {
-    /* Implémenter la logique pour écrire un élément log de la liste chaînée log_element dans le fichier .backup_log
-     * @param: elt - un élément log à écrire sur une ligne
-     *         logfile - un pointeur vers le fichier ouvert
-     */
-
     if (logfile == NULL) {
         perror("Le fichier est NULL");
         return;  // Quitter si le fichier est NULL
@@ -151,7 +153,10 @@ void write_log_element(log_element *elt, FILE *logfile) {
         sprintf(&md5_str[i * 2], "%02x", elt->md5[i]);
     }
 
-    // Écrit l'élément dans le fichier et ajoute un saut de ligne
+    // Afficher l'élément log avant d'écrire (pour débogage)
+    printf("Écriture dans le fichier : %s;%s;%s\n", elt->path, elt->date, md5_str);
+
+    // Écrire l'élément dans le fichier et ajouter un saut de ligne
     fprintf(logfile, "%s;%s;%s\n", elt->path, elt->date, md5_str);
 }
 
