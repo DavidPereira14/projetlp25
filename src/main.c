@@ -4,10 +4,11 @@
 #include <getopt.h>
 #include "file_handler.h"
 #include "deduplication.h"
+#include <sys/time.h>
 #include "backup_manager.h"
 #include "network.h"
 #include <stdbool.h>
-/*
+
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
     printf("Options :\n");
@@ -103,15 +104,43 @@ int main(int argc, char *argv[]) {
     }
 
     if (backup) {
+        struct timeval start, end;
+        long seconds, useconds;
+        double total_time;
         printf("Exécution d'une sauvegarde...\n");
         if (dry_run) printf("Simulation activée.\n");
-        if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        // Appeler votre fonction de sauvegarde ici
+        if (verbose){
+            gettimeofday(&start, NULL); // Début du chronométrage
+        }
+        create_backup(source,dest);
+        if (verbose){
+            gettimeofday(&end, NULL);   // Fin du chronométrage
+            // Calcul de la durée
+            seconds = end.tv_sec - start.tv_sec;
+            useconds = end.tv_usec - start.tv_usec;
+            total_time = seconds + useconds / 1e6;
+            printf("Temps d'exécution : %f secondes\n", total_time);
+        }
     } else if (restore) {
+        struct timeval start, end;
+        long seconds, useconds;
+        double total_time;
         printf("Restauration en cours...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
+        if (verbose){
+            gettimeofday(&start, NULL); // Début du chronométrage
+        }
         // Appeler votre fonction de restauration ici
+        restore_backup(source,dest);
+        if (verbose){
+            gettimeofday(&end, NULL);   // Fin du chronométrage
+            // Calcul de la durée
+            seconds = end.tv_sec - start.tv_sec;
+            useconds = end.tv_usec - start.tv_usec;
+            total_time = seconds + useconds / 1e6;
+            printf("Temps d'exécution : %f secondes\n", total_time);
+        }
     } else if (list_backups) {
         printf("Liste des sauvegardes...\n");
         // Appeler votre fonction de liste des sauvegardes ici
@@ -122,13 +151,4 @@ int main(int argc, char *argv[]) {
     }
 
     return EXIT_SUCCESS;
-}
-
-
-*/
-
-int main(int argc, char *argv[]) {
-    if (argc>2){
-        create_backup(argv[1],argv[2]);
-    }
 }
