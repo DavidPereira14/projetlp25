@@ -264,7 +264,7 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             } else {
                 if (src_stat.st_mtime > dest_stat.st_mtime) {
                     copy_file(src_path, dest_path);
-                    //backup_file(dest_path);
+                    backup_file(dest_path);
                 }
             }
         }
@@ -345,6 +345,9 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 
     // Lecture de l'ancien backup_log
     log_t logs = read_backup_log(backup_log_path);
+
+    // Appel de la fonction enregistrement pour faire le backup incrémental
+    enregistrement(source_dir, backup_path);
 
     // Lister et sauvegarder les fichiers
     DIR *dir = opendir(source_dir);

@@ -93,7 +93,7 @@ void update_backup_log(const char *logfile, log_t *logs) {
 
     // Parcours du fichier et stockage des lignes valides
     while (fgets(line, sizeof(line), file)) {
-        printf("\nLigne lue : %s", line);  // Afficher la ligne lue pour le débogage
+        printf("Ligne lue : %s", line);  // Afficher la ligne lue pour le débogage
 
         // Extraire le chemin du fichier de chaque ligne
         char *path_in_file = strtok(line, ";");
