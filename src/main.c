@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <sys/time.h>
 #include "file_handler.h"
 #include "deduplication.h"
-#include <sys/time.h>
 #include "backup_manager.h"
 #include "network.h"
 #include <stdbool.h>
@@ -30,79 +30,90 @@ void print_usage(const char *prog_name) {
     printf("  -v, --verbose           : Active un affichage détaillé\n");
 }
 
+void handle_backup(const char *source, const char *dest, bool dry_run, bool verbose) {
+    struct timeval start, end;
+    printf("Exécution d'une sauvegarde...\n");
+    if (dry_run) printf("Simulation activée.\n");
+    if (verbose) gettimeofday(&start, NULL);
+
+    create_backup(source, dest);
+
+    if (verbose) {
+        gettimeofday(&end, NULL);
+        double total_time = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
+        printf("Temps d'exécution : %f secondes\n", total_time);
+    }
+}
+
+void handle_restore(const char *source, const char *dest, bool dry_run, bool verbose) {
+    struct timeval start, end;
+    printf("Restauration en cours...\n");
+    if (dry_run) printf("Simulation activée.\n");
+    if (verbose) gettimeofday(&start, NULL);
+
+    restore_backup(source, dest);
+
+    if (verbose) {
+        gettimeofday(&end, NULL);
+        double total_time = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
+        printf("Temps d'exécution : %f secondes\n", total_time);
+    }
+}
+
+void handle_list_backups(const char *source) {
+    printf("Liste des sauvegardes...\n");
+    list_backups(source);
+}
+
 int main(int argc, char *argv[]) {
-    bool backup = false, restore = false, list_backups = false, dry_run = false, verbose = false;
+    bool backup = false, restore = false, liste_backups = false, dry_run = false, verbose = false;
     const char *d_server = NULL, *s_server = NULL;
     const char *dest = NULL, *source = NULL;
     int d_port = 0, s_port = 0;
 
-    for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--backup") == 0) {
-            if (restore || list_backups) {
-                fprintf(stderr, "Erreur : --backup ne peut pas être utilisé avec --restore ou --list-backups\n");
+    struct option long_options[] = {
+            {"backup", no_argument, NULL, 'b'},
+            {"restore", no_argument, NULL, 'r'},
+            {"list-backups", no_argument, NULL, 'l'},
+            {"dry-run", no_argument, NULL, 'd'},
+            {"d-server", required_argument, NULL, 'D'},
+            {"d-port", required_argument, NULL, 'P'},
+            {"s-server", required_argument, NULL, 'S'},
+            {"s-port", required_argument, NULL, 'p'},
+            {"dest", required_argument, NULL, 't'},
+            {"source", required_argument, NULL, 's'},
+            {"verbose", no_argument, NULL, 'v'},
+            {0, 0, 0, 0}
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "brldD:P:S:p:t:s:v", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'b': backup = true; break;
+            case 'r': restore = true; break;
+            case 'l': liste_backups = true; break;
+            case 'd': dry_run = true; break;
+            case 'D': d_server = optarg; break;
+            case 'P': d_port = atoi(optarg); break;
+            case 'S': s_server = optarg; break;
+            case 'p': s_port = atoi(optarg); break;
+            case 't': dest = optarg; break;
+            case 's': source = optarg; break;
+            case 'v': verbose = true; break;
+            default:
+                print_usage(argv[0]);
                 return EXIT_FAILURE;
-            }
-            backup = true;
-        } else if (strcmp(argv[i], "--restore") == 0) {
-            if (backup || list_backups) {
-                fprintf(stderr, "Erreur : --restore ne peut pas être utilisé avec --backup ou --list-backups\n");
-                return EXIT_FAILURE;
-            }
-            restore = true;
-        } else if (strcmp(argv[i], "--list-backups") == 0) {
-            if (backup || restore) {
-                fprintf(stderr, "Erreur : --list-backups ne peut pas être utilisé avec --backup ou --restore\n");
-                return EXIT_FAILURE;
-            }
-            list_backups = true;
-        } else if (strcmp(argv[i], "--dry-run") == 0) {
-            dry_run = true;
-        } else if (strcmp(argv[i], "--d-server") == 0) {
-            if (++i < argc) {
-                d_server = argv[i];
-            } else {
-                fprintf(stderr, "Erreur : --d-server requiert une adresse IP\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "--d-port") == 0) {
-            if (++i < argc) {
-                d_port = atoi(argv[i]);
-            } else {
-                fprintf(stderr, "Erreur : --d-port requiert un numéro de port\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "--s-server") == 0) {
-            if (++i < argc) {
-                s_server = argv[i];
-            } else {
-                fprintf(stderr, "Erreur : --s-server requiert une adresse IP\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "--s-port") == 0) {
-            if (++i < argc) {
-                s_port = atoi(argv[i]);
-            } else {
-                fprintf(stderr, "Erreur : --s-port requiert un numéro de port\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "--dest") == 0) {
-            if (++i < argc) {
-                dest = argv[i];
-            } else {
-                fprintf(stderr, "Erreur : --dest requiert un chemin\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "--source") == 0) {
-            if (++i < argc) {
-                source = argv[i];
-            } else {
-                fprintf(stderr, "Erreur : --source requiert un chemin\n");
-                return EXIT_FAILURE;
-            }
-        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
-            verbose = true;
-        } else {
-            fprintf(stderr, "Option inconnue : %s\n", argv[i]);
+        }
+    }
+
+    if ((backup + restore + liste_backups) > 1) {
+        fprintf(stderr, "Erreur : Vous ne pouvez spécifier qu'une seule action principale (--backup, --restore, ou --list-backups).\n");
+        return EXIT_FAILURE;
+    }
+
+    if (backup || restore) {
+        if (!source || !dest) {
+            fprintf(stderr, "Erreur : Les options --source et --dest sont requises pour cette action.\n");
             print_usage(argv[0]);
             return EXIT_FAILURE;
         }
@@ -136,7 +147,6 @@ int main(int argc, char *argv[]) {
         if (verbose){
             gettimeofday(&start, NULL); // Début du chronométrage
         }
-        // Appeler votre fonction de restauration ici
         restore_backup(source,dest);
         if (verbose){
             gettimeofday(&end, NULL);   // Fin du chronométrage
@@ -146,9 +156,9 @@ int main(int argc, char *argv[]) {
             total_time = seconds + useconds / 1e6;
             printf("Temps d'exécution : %f secondes\n", total_time);
         }
-    } else if (list_backups) {
+    } else if (liste_backups) {
         printf("Liste des sauvegardes...\n");
-        // Appeler votre fonction de liste des sauvegardes ici
+        list_backups(source);
     } else {
         fprintf(stderr, "Erreur : Aucune action spécifiée.\n");
         print_usage(argv[0]);
