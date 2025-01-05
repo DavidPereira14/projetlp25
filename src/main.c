@@ -13,7 +13,7 @@
 #define HASH_TABLE_SIZE 100
 
 
-/*
+
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
     printf("Options :\n");
@@ -167,25 +167,4 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
-
-
-int main() {
-    FILE *file = fopen(TEST_FILE, "rb");
-    if (!file) {
-        perror("Erreur lors de l'ouverture du fichier");
-        return EXIT_FAILURE;
-    }
-
-    // Initialiser les structures de déduplication
-    Chunk chunks[1024]; // Tableau pour stocker les chunks du fichier
-    Md5Entry hash_table[HASH_TABLE_SIZE]; // Tableau de hachage pour stocker les MD5
-    memset(hash_table, 0, sizeof(hash_table)); // Initialiser la table de hachage à 0
-
-    // Effectuer la déduplication
-    deduplicate_file(file, chunks, hash_table);
-
-    fclose(file);
-    return EXIT_SUCCESS;
-}
- */
 

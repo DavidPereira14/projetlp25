@@ -304,46 +304,134 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
     if (check_directory(source_dir) == -1) {
-        printf("Erreur : vérifier le répertoire source (existance, permission)\n");
+        printf("Erreur : vérifier le répertoire source (existence, permission)\n");
         return;
     }
     if (check_directory(backup_dir) == -1) {
-        printf("Erreur : vérifier le répertoire backup (existance, permission)\n");
+        printf("Erreur : vérifier le répertoire backup (existence, permission)\n");
         return;
     }
 
+    // Génération du timestamp pour le nom de la sauvegarde
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
+
+    // Création du chemin de sauvegarde
     char backup_path[1024];
     snprintf(backup_path, sizeof(backup_path), "%s/%s", backup_dir, timestamp);
 
-    char *last_backup_name = find_last_backup(backup_dir);
-    char backup_log[4096];
-    snprintf(backup_log, sizeof(backup_log), "%s/.backup_log", backup_path);
+    // Création du fichier .backup_log
+    char backup_log_path[1024];
+    snprintf(backup_log_path, sizeof(backup_log_path), "%s/.backup_log", backup_path);
 
-    if (last_backup_name) {
-        printf("Copie complète depuis : %s\n", last_backup_name);
-        char last_backup_path[1024];
-        snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
-        mkdir(backup_path, 0755);
-        copie_backup(last_backup_path, backup_path);
-        free(last_backup_name);
-    } else {
-        mkdir(backup_path, 0755);
-        printf("1");
-        fopen(backup_log, "w");
-        printf("2");
+    mkdir(backup_path, 0755);
+
+    FILE *log_file = fopen(backup_log_path, "w");
+    if (!log_file) {
+        perror("Erreur lors de la création du fichier .backup_log");
+        return;
     }
 
+    char *last_backup_name = find_last_backup(backup_dir);
 
-    enregistrement(source_dir, backup_path);
+    if (last_backup_name) {
+        // Sauvegarde incrémentale
+        char last_backup_path[1024];
+        snprintf(last_backup_path, sizeof(last_backup_path), "%s/%s", backup_dir, last_backup_name);
 
-    // Ici, vous devez lire les logs du fichier .backup_log
-    log_t logs = read_backup_log(backup_path);
+        copie_backup(last_backup_path, backup_path);
+        free(last_backup_name);
+    }
 
-    // Après avoir mis à jour logs, vous pouvez appeler update_backup_log pour mettre à jour le fichier
-    update_backup_log(backup_log, &logs);
+    // Lecture de l'ancien backup_log
+    log_t logs = read_backup_log(backup_log_path);
+
+    // Lister et sauvegarder les fichiers
+    DIR *dir = opendir(source_dir);
+    if (!dir) {
+        perror("Erreur lors de l'ouverture du répertoire source");
+        fclose(log_file);
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Chemin complet du fichier source et destination
+        char src_file_path[1024], dest_file_path[1024];
+        snprintf(src_file_path, sizeof(src_file_path), "%s/%s", source_dir, entry->d_name);
+        snprintf(dest_file_path, sizeof(dest_file_path), "%s/%s", backup_path, entry->d_name);
+
+        // Copier le fichier vers le répertoire de sauvegarde
+        copy_file(src_file_path, dest_file_path);
+
+        // Récupérer les métadonnées du fichier
+        struct stat file_stat;
+        if (stat(src_file_path, &file_stat) == -1) {
+            perror("Erreur lors de la récupération des métadonnées");
+            continue;
+        }
+
+        // Création d'un élément de log
+        log_element *new_log = malloc(sizeof(log_element));
+        if (!new_log) {
+            perror("Erreur d'allocation mémoire pour log_element");
+            continue;
+        }
+
+        new_log->path = strdup(dest_file_path);
+        if (!new_log->path) {
+            perror("Erreur d'allocation mémoire pour path");
+            free(new_log);
+            continue;
+        }
+
+        new_log->date = malloc(32);
+        if (!new_log->date) {
+            perror("Erreur d'allocation mémoire pour date");
+            free(new_log->path);
+            free(new_log);
+            continue;
+        }
+        get_timestamp(new_log->date, 32);
+
+        // Calculer la somme MD5 du fichier avec compute_md5()
+        unsigned char file_data[4096];
+        FILE *file = fopen(src_file_path, "rb");
+        if (!file) {
+            perror("Erreur d'ouverture du fichier pour MD5");
+            free(new_log->path);
+            free(new_log->date);
+            free(new_log);
+            continue;
+        }
+
+        size_t bytes_read = fread(file_data, 1, sizeof(file_data), file);
+        fclose(file);
+
+        compute_md5(file_data, bytes_read, new_log->md5);
+
+        // Écrire les logs dans .backup_log
+        write_log_element(new_log, log_file);
+
+        // Libération de mémoire
+        free(new_log->path);
+        free(new_log->date);
+        free(new_log);
+    }
+
+    closedir(dir);
+    fclose(log_file);
+
+    // Mettre à jour le fichier .backup_log
+    update_backup_log(backup_log_path, &logs);
 }
+
+
+
 
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
