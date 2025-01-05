@@ -4,10 +4,11 @@
 #include <getopt.h>
 #include "file_handler.h"
 #include "deduplication.h"
+#include <sys/time.h>
 #include "backup_manager.h"
 #include "network.h"
 #include <stdbool.h>
-/*
+
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
     printf("Options :\n");
@@ -103,15 +104,43 @@ int main(int argc, char *argv[]) {
     }
 
     if (backup) {
+        struct timeval start, end;
+        long seconds, useconds;
+        double total_time;
         printf("Exécution d'une sauvegarde...\n");
         if (dry_run) printf("Simulation activée.\n");
-        if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
-        // Appeler votre fonction de sauvegarde ici
+        if (verbose){
+            gettimeofday(&start, NULL); // Début du chronométrage
+        }
+        create_backup(source,dest);
+        if (verbose){
+            gettimeofday(&end, NULL);   // Fin du chronométrage
+            // Calcul de la durée
+            seconds = end.tv_sec - start.tv_sec;
+            useconds = end.tv_usec - start.tv_usec;
+            total_time = seconds + useconds / 1e6;
+            printf("Temps d'exécution : %f secondes\n", total_time);
+        }
     } else if (restore) {
+        struct timeval start, end;
+        long seconds, useconds;
+        double total_time;
         printf("Restauration en cours...\n");
         if (dry_run) printf("Simulation activée.\n");
         if (verbose) printf("Source : %s, Destination : %s\n", source, dest);
+        if (verbose){
+            gettimeofday(&start, NULL); // Début du chronométrage
+        }
         // Appeler votre fonction de restauration ici
+        restore_backup(source,dest);
+        if (verbose){
+            gettimeofday(&end, NULL);   // Fin du chronométrage
+            // Calcul de la durée
+            seconds = end.tv_sec - start.tv_sec;
+            useconds = end.tv_usec - start.tv_usec;
+            total_time = seconds + useconds / 1e6;
+            printf("Temps d'exécution : %f secondes\n", total_time);
+        }
     } else if (list_backups) {
         printf("Liste des sauvegardes...\n");
         // Appeler votre fonction de liste des sauvegardes ici
@@ -123,139 +152,3 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
-
-
-
-
-// Fonction pour créer un répertoire si celui-ci n'existe pas
-void create_directory_if_needed(const char *dir) {
-    struct stat st = {0};
-    if (stat(dir, &st) == -1) {
-        if (mkdir(dir, 0755) != 0) {
-            perror("Erreur lors de la création du répertoire");
-            exit(EXIT_FAILURE);  // Quitte si une erreur survient
-        }
-        printf("Répertoire '%s' créé avec succès.\n", dir);
-    } else {
-        printf("Le répertoire '%s' existe déjà.\n", dir);
-    }
-}
-//Test fonction create_backup
-int main(int argc, char *argv[]) {
-    // Vérifie si les arguments source et de sauvegarde sont passés
-    if (argc > 2) {
-        const char *source_dir = argv[1];
-        const char *backup_dir = argv[2];
-
-        // Crée les répertoires source et de sauvegarde s'ils n'existent pas
-        create_directory_if_needed(source_dir);
-        create_directory_if_needed(backup_dir);
-
-        // Appel de la fonction de création de sauvegarde
-        create_backup(source_dir, backup_dir);
-    } else {
-        fprintf(stderr, "Erreur : deux arguments sont nécessaires (source_dir et backup_dir).\n");
-        return 1;  // Exit avec une erreur si les arguments sont manquants
-    }
-
-    return 0;
-}
-
-
-
-//Teste fonction write log element
-int main() {
-    // Créer un élément log fictif pour tester
-    log_element elt;
-
-    // Initialisation du chemin, de la date, et du tableau MD5
-    elt.path = "/home/user/file1.txt";  // Exemple de chemin de fichier
-    elt.date = "2025-01-05 12:30:00";   // Exemple de date
-
-    // Exemple de tableau MD5 (normalement calculé à partir du fichier)
-    unsigned char example_md5[MD5_DIGEST_LENGTH] = {
-            0xd2, 0xd2, 0xda, 0x67, 0x1a, 0x6f, 0xc2, 0x35,
-            0x28, 0x6b, 0xc9, 0x9b, 0x9d, 0xf5, 0x28, 0xc9
-    };
-    memcpy(elt.md5, example_md5, MD5_DIGEST_LENGTH);  // Copie du tableau MD5 dans la structure
-
-    // Initialisation des pointeurs next et prev (à NULL pour l'instant)
-    elt.next = NULL;
-    elt.prev = NULL;
-
-    // Ouvrir un fichier de log pour écrire
-    FILE *logfile = fopen(".backup_log", "w");
-    if (logfile == NULL) {
-        perror("Erreur lors de l'ouverture du fichier de log");
-        return EXIT_FAILURE;
-    }
-
-    // Appeler la fonction write_log_element pour écrire l'élément
-    write_log_element(&elt, logfile);
-
-    // Fermer le fichier de log
-    fclose(logfile);
-
-    return 0;
-}
-
-
-//Test write_log_element et  updtade_backup_log
-int main() {
-    const char *logfile = ".backup_log";
-
-    // Créer les fichiers file1.txt et file2.txt pour tester
-    FILE *file1 = fopen("file1.txt", "w");
-    if (file1 == NULL) {
-        perror("Erreur lors de la création de file1.txt");
-        return EXIT_FAILURE;
-    }
-    fprintf(file1, "Contenu de file1.txt\n");
-    fclose(file1);
-
-    FILE *file2 = fopen("file2.txt", "w");
-    if (file2 == NULL) {
-        perror("Erreur lors de la création de file2.txt");
-        return EXIT_FAILURE;
-    }
-    fprintf(file2, "Contenu de file2.txt\n");
-    fclose(file2);
-
-    // Créer un fichier de log simulé
-    FILE *file = fopen(logfile, "w");
-    if (file == NULL) {
-        perror("Erreur lors de la création du fichier de log");
-        return EXIT_FAILURE;
-    }
-
-    // Écrire quelques lignes dans le fichier .backup_log
-    fprintf(file, "/mnt/c/Users/david/OneDrive/Documents/GitHub/projetlp25/file1.txt;2025-01-05 12:30:00;d2d2da671a6fc235286bc99b9df528c9\n");
-    fprintf(file, "/mnt/c/Users/david/OneDrive/Documents/GitHub/projetlp25/file2.txt;2025-01-05 12:31:00;5f4dcc3b5aa765d61d8327deb882cf99\n");
-    fprintf(file, "/mnt/c/Users/david/OneDrive/Documents/GitHub/projetlp25/file_non_existant.txt;2025-01-05 12:32:00;1234567890abcdef1234567890abcdef\n");
-
-    fclose(file);
-
-    // Initialiser la structure de logs (log_t) pour simuler l'état avant modification
-    log_t logs = { NULL, NULL };
-
-    // Appeler la fonction pour mettre à jour le fichier de log
-    update_backup_log(logfile, &logs);
-
-    // Lire et afficher le contenu du fichier après mise à jour
-    file = fopen(logfile, "r");
-    if (file == NULL) {
-        perror("Erreur lors de l'ouverture du fichier pour lecture");
-        return EXIT_FAILURE;
-    }
-
-    printf("Contenu mis à jour du fichier .backup_log :\n");
-    char line[1024];
-    while (fgets(line, sizeof(line), file)) {
-        printf("%s", line);
-    }
-
-    fclose(file);  // Fermer le fichier après lecture
-
-    return 0;
-}
- */
