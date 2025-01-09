@@ -10,6 +10,50 @@
 #include <unistd.h>
 #include <limits.h>
 
+// Fonction récursive pour calculer la taille d'un dossier
+long long calculer_taille_dossier(const char *chemin) {
+    DIR *dossier = opendir(chemin);
+    if (!dossier) {
+        perror("Erreur d'ouverture du dossier");
+        return -1;
+    }
+
+    struct dirent *entree;
+    struct stat info;
+    long long taille_totale = 0;
+
+    while ((entree = readdir(dossier)) != NULL) {
+        // Ignorer les entrées spéciales "." et ".."
+        if (strcmp(entree->d_name, ".") == 0 || strcmp(entree->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Construire le chemin complet de l'entrée
+        char chemin_complet[1024];
+        snprintf(chemin_complet, sizeof(chemin_complet), "%s/%s", chemin, entree->d_name);
+
+        // Obtenir les informations sur l'entrée
+        if (stat(chemin_complet, &info) == -1) {
+            perror("Erreur d'accès aux informations du fichier");
+            continue;
+        }
+
+        if (S_ISREG(info.st_mode)) {
+            // Si c'est un fichier, ajouter sa taille
+            taille_totale += info.st_size;
+        } else if (S_ISDIR(info.st_mode)) {
+            // Si c'est un dossier, appeler récursivement la fonction
+            long long taille_sous_dossier = calculer_taille_dossier(chemin_complet);
+            if (taille_sous_dossier != -1) {
+                taille_totale += taille_sous_dossier;
+            }
+        }
+    }
+
+    closedir(dossier);
+    return taille_totale;
+}
+
 void appel_write(char *file_path, FILE *logfile) {
     struct stat file_stat;
     if (stat(file_path, &file_stat) == -1) {
@@ -624,7 +668,12 @@ void list_backups(const char *backup_dir){
 
         // Vérifier si c'est un répertoire
         if (S_ISDIR(file_stat.st_mode)) {
-            printf("- %s\n", entry->d_name);
+            long long taille = calculer_taille_dossier(full_path);
+            if (taille == -1) {
+                fprintf(stderr, "Erreur lors du calcul de la taille du dossier.\n");
+                continue;
+            }
+            printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
         }
     }
 
