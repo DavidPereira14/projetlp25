@@ -618,7 +618,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
             if (src_stat.st_mtime > dest_stat.st_mtime) {
                 copy_file(src_path, dest_path);
             }
-                // Vérifier si la taille diffère
+            // Vérifier si la taille diffère
             else if (src_stat.st_size != dest_stat.st_size) {
                 copy_file(src_path, dest_path);
             }
