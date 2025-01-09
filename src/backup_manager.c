@@ -10,6 +10,60 @@
 #include <unistd.h>
 #include <limits.h>
 
+void appel_write(char *file_path, FILE *logfile) {
+    struct stat file_stat;
+    if (stat(file_path, &file_stat) == -1) {
+        perror("Erreur lors de la récupération des métadonnées36");
+        return;
+    }
+
+    log_element *new_log = malloc(sizeof(log_element));
+    if (!new_log) {
+        perror("Erreur d'allocation mémoire pour log_element");
+        return;
+    }
+
+    new_log->path = strdup(file_path);
+    new_log->date = malloc(32);
+    if (!new_log->path || !new_log->date) {
+        perror("Erreur d'allocation mémoire pour path ou date");
+        free(new_log->path);
+        free(new_log);
+        return;
+    }
+    get_timestamp(new_log->date, 32);
+
+    // Calcul du MD5
+    unsigned char file_data[4096];
+    FILE *file = fopen(file_path, "rb");
+    if (!file) {
+        perror("Erreur d'ouverture du fichier pour MD5");
+        free(new_log->path);
+        free(new_log->date);
+        free(new_log);
+        return;
+    }
+    size_t bytes_read = fread(file_data, 1, sizeof(file_data), file);
+    fclose(file);
+
+    compute_md5(file_data, bytes_read, new_log->md5);
+
+    // Vérifie si logfile est ouvert avant d'écrire
+    if (!logfile) {
+        fprintf(stderr, "Erreur : fichier de log non ouvert.\n");
+        free(new_log->path);
+        free(new_log->date);
+        free(new_log);
+        return;
+    }
+
+    write_log_element(new_log, logfile);
+
+    free(new_log->path);
+    free(new_log->date);
+    free(new_log);
+}
+
 // Fonction pour convertir un MD5 en chaîne hexadécimale
 char* md5_to_string(unsigned char *md5) {
     static char md5_str[MD5_DIGEST_LENGTH * 2 + 1];
@@ -220,21 +274,24 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
     closedir(src);
 }
 
-int enregistrement(const char *src_dir, const char *dest_dir) {
+int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
     DIR *src = opendir(src_dir);
-    DIR *dest = opendir(dest_dir);
-    if (!dest) {
-        printf("Erreur d'ouverture du répertoire destination\n");
+    if (!src) {
+        perror("Erreur lors de l'ouverture du répertoire source");
         return -1;
     }
-    if (!src) {
-        printf("Erreur lors de l'ouverture du répertoire source\n");
+
+    DIR *dest = opendir(dest_dir);
+    if (!dest) {
+        perror("Erreur lors de l'ouverture du répertoire destination");
+        closedir(src);
         return -1;
     }
 
     struct dirent *entry;
-    struct stat src_stat;
-    struct stat dest_stat;
+    struct stat src_stat, dest_stat;
+
+    // Parcourir les fichiers dans le répertoire source
     while ((entry = readdir(src)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
@@ -245,32 +302,28 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
         snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
 
         if (stat(src_path, &src_stat) == -1) {
-            printf("Erreur lors de la récupération des informations source\n");
+            perror("Erreur lors de la récupération des informations source");
             continue;
         }
 
         if (S_ISDIR(src_stat.st_mode)) {
             if (stat(dest_path, &dest_stat) == -1) {
                 if (mkdir(dest_path, 0755) == -1) {
-                    printf("Erreur lors de la création du dossier destination\n");
+                    perror("Erreur lors de la création du dossier destination");
                     continue;
                 }
             }
-            enregistrement(src_path, dest_path);  // Appel récursif
+            enregistrement(src_path, dest_path,logfile);  // Appel récursif
         } else if (S_ISREG(src_stat.st_mode)) {
-            if (stat(dest_path, &dest_stat) == -1) {
+            if (stat(dest_path, &dest_stat) == -1 || src_stat.st_mtime > dest_stat.st_mtime) {
                 copy_file(src_path, dest_path);
                 //backup_file(dest_path);
-            } else {
-                if (src_stat.st_mtime > dest_stat.st_mtime) {
-                    copy_file(src_path, dest_path);
-                    backup_file(dest_path);
-                }
+                appel_write(dest_path, logfile);
             }
         }
     }
-    closedir(src);
 
+    // Vérifier les fichiers dans le répertoire destination
     while ((entry = readdir(dest)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || strcmp(entry->d_name, ".backup_log") == 0) {
             continue;
@@ -284,20 +337,15 @@ int enregistrement(const char *src_dir, const char *dest_dir) {
             continue;
         }
 
-        if (S_ISDIR(dest_stat.st_mode)) {
-            if (stat(src_path, &src_stat) == -1) {
-                supprimer_recursivement(dest_path);  // Implémenter cette fonction pour supprimer récursivement les répertoires
-            }
-        } else {
-            if (stat(src_path, &src_stat) == -1) {
-                remove(dest_path);
-            }
+        if (stat(src_path, &src_stat) == -1) {
+            supprimer_recursivement(dest_path);
         }
     }
+
+    // Fermeture des répertoires et du fichier de log
+    closedir(src);
     closedir(dest);
-
-    printf("Sauvegarde terminée et .backup_log mis à jour.\n");
-
+    printf("Sauvegarde terminée et fichier .backup_log mis à jour.\n");
     return 0;
 }
 
@@ -347,86 +395,8 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     log_t logs = read_backup_log(backup_log_path);
 
     // Appel de la fonction enregistrement pour faire le backup incrémental
-    enregistrement(source_dir, backup_path);
+    enregistrement(source_dir, backup_path,log_file);
 
-    // Lister et sauvegarder les fichiers
-    DIR *dir = opendir(source_dir);
-    if (!dir) {
-        perror("Erreur lors de l'ouverture du répertoire source");
-        fclose(log_file);
-        return;
-    }
-
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-
-        // Chemin complet du fichier source et destination
-        char src_file_path[1024], dest_file_path[1024];
-        snprintf(src_file_path, sizeof(src_file_path), "%s/%s", source_dir, entry->d_name);
-        snprintf(dest_file_path, sizeof(dest_file_path), "%s/%s", backup_path, entry->d_name);
-
-        // Copier le fichier vers le répertoire de sauvegarde
-        copy_file(src_file_path, dest_file_path);
-
-        // Récupérer les métadonnées du fichier
-        struct stat file_stat;
-        if (stat(src_file_path, &file_stat) == -1) {
-            perror("Erreur lors de la récupération des métadonnées");
-            continue;
-        }
-
-        // Création d'un élément de log
-        log_element *new_log = malloc(sizeof(log_element));
-        if (!new_log) {
-            perror("Erreur d'allocation mémoire pour log_element");
-            continue;
-        }
-
-        new_log->path = strdup(dest_file_path);
-        if (!new_log->path) {
-            perror("Erreur d'allocation mémoire pour path");
-            free(new_log);
-            continue;
-        }
-
-        new_log->date = malloc(32);
-        if (!new_log->date) {
-            perror("Erreur d'allocation mémoire pour date");
-            free(new_log->path);
-            free(new_log);
-            continue;
-        }
-        get_timestamp(new_log->date, 32);
-
-        // Calculer la somme MD5 du fichier avec compute_md5()
-        unsigned char file_data[4096];
-        FILE *file = fopen(src_file_path, "rb");
-        if (!file) {
-            perror("Erreur d'ouverture du fichier pour MD5");
-            free(new_log->path);
-            free(new_log->date);
-            free(new_log);
-            continue;
-        }
-
-        size_t bytes_read = fread(file_data, 1, sizeof(file_data), file);
-        fclose(file);
-
-        compute_md5(file_data, bytes_read, new_log->md5);
-
-        // Écrire les logs dans .backup_log
-        write_log_element(new_log, log_file);
-
-        // Libération de mémoire
-        free(new_log->path);
-        free(new_log->date);
-        free(new_log);
-    }
-
-    closedir(dir);
     fclose(log_file);
 
     // Mettre à jour le fichier .backup_log
@@ -604,7 +574,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
             if (src_stat.st_mtime > dest_stat.st_mtime) {
                 copy_file(src_path, dest_path);
             }
-            // Vérifier si la taille diffère
+                // Vérifier si la taille diffère
             else if (src_stat.st_size != dest_stat.st_size) {
                 copy_file(src_path, dest_path);
             }
