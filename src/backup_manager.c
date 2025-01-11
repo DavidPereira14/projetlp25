@@ -731,10 +731,7 @@ void list_backups(const char *backup_dir){
         return;
     }
 
-    if (verbose) {
-        printf("Liste des sauvegardes dans %s:\n", backup_dir);
-    }
-
+    printf("Liste des sauvegardes dans %s:\n", backup_dir);
 
     // Parcourir les fichiers et dossiers
     while ((entry = readdir(dir)) != NULL) {
@@ -756,15 +753,20 @@ void list_backups(const char *backup_dir){
         if (S_ISDIR(file_stat.st_mode)) {
             long long taille = calculer_taille_dossier(full_path);
             if (taille == -1) {
-                if (verbose) {
-                    printf("Erreur lors du calcul de la taille du dossier %s.\n", full_path);
-                }
+                fprintf(stderr, "Erreur lors du calcul de la taille du dossier.\n");
                 continue;
             }
-            if (verbose){
+            if(verbose){
+                char absolute_path[PATH_MAX];               // Buffer pour le chemin absolu
+
+                if (!realpath(full_path, absolute_path) != NULL) {
+                    perror("Erreur lors de la résolution du chemin");
+                }
+                printf("- %s taille de l'enregistrement : %lld octets\n", absolute_path,taille);
+            }
+            else{
                 printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
             }
-
         }
     }
 
