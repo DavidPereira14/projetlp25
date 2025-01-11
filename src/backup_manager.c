@@ -501,6 +501,8 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 }
 
 
+
+
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     printf("Write_backup_file");
