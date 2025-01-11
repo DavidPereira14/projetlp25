@@ -3,8 +3,11 @@
 #include <string.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <stdbool.h>
 #include "file_handler.h"
 #include "deduplication.h"
+
+extern bool verbose;
 
 // Fonction permettant de lire un élément du fichier .backup_log
 log_t read_backup_log(const char *logfile){
@@ -65,6 +68,11 @@ log_t read_backup_log(const char *logfile){
         if (log_list.head == NULL) {
             log_list.head = new_element;  // Si la liste était vide, le nouvel élément est aussi le premier
         }
+
+        // Si verbose est activé, afficher le log ajouté
+        if (verbose) {
+            printf("Ajout du log: %s; %s; %s;\n", new_element->path, new_element->date, md5_str);
+        }
     }
 
     fclose(file);
@@ -102,6 +110,11 @@ void update_backup_log(const char *logfile, log_t *logs) {
             }
             lines = temp;
             lines[line_count++] = line_copy;
+
+            if (verbose) {
+                printf("Ligne valide: %s\n", line_copy);
+            }
+
         } else {
             free(line_copy); // Libère la ligne si invalide
         }
@@ -129,6 +142,10 @@ void update_backup_log(const char *logfile, log_t *logs) {
 
     free(lines);
     fclose(file);
+
+    if (verbose) {
+        printf("Mise à jour du fichier .backup_log avec %d lignes valides.\n", line_count);
+    }
 }
 
 void write_log_element(log_element *elt, FILE *logfile) {
@@ -155,6 +172,10 @@ void write_log_element(log_element *elt, FILE *logfile) {
         return;
     }
 
+    if (verbose) {
+        printf("Ecriture du log: %s;%s;%u\n", elt->path, elt->date, md5_sum);
+    }
+
     return;
 
 }
@@ -176,6 +197,10 @@ void list_files(const char *path){
             continue;
         }
         printf("%s\n", entry->d_name);
+
+        if (verbose) {
+            printf("Fichier trouvé dans le répertoire: %s\n", entry->d_name);
+        }
     }
 
     // Ferme le répertoire

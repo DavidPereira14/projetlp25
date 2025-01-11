@@ -422,10 +422,12 @@ int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
     printf("create_backup");
+    if (verbose) printf("Vérification du répertoire source '%s' .\n",source_dir);
     if (check_directory(source_dir) == -1) {
         printf("Erreur : vérifier le répertoire source (existence, permission)\n");
         return;
     }
+    if (verbose) printf("Vérification du répertoire de sauvegarde '%s'.\n", backup_dir);
     if (check_directory(backup_dir) == -1) {
         printf("Erreur : vérifier le répertoire backup (existence, permission)\n");
         return;
@@ -472,6 +474,8 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 
     // Mettre à jour le fichier .backup_log
     update_backup_log(backup_log_path, &logs);
+
+    if (verbose) printf("Sauvegarde terminée avec succès dans '%s'.\n", backup_dir);
 }
 
 
@@ -735,7 +739,10 @@ void list_backups(const char *backup_dir){
                 }
                 continue;
             }
-            printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
+            if (verbose){
+                printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
+            }
+
         }
     }
 

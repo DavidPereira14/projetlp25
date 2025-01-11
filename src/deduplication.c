@@ -68,6 +68,10 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
     int chunk_index = 0;
     size_t octets_lu;
     unsigned char md5[MD5_DIGEST_LENGTH];
+
+    if (verbose) {
+        printf("Début de la déduplication du fichier...\n");
+    }
     //Lecture du fichier chunk par chunk
     while ((octets_lu = fread(buffer,1,CHUNK_SIZE,file)) > 0) {
         //On calcule le MD5 du chunck lu
@@ -85,13 +89,22 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
             memcpy(chunks[chunk_index].md5,md5,MD5_DIGEST_LENGTH); //On copie le MD5 dans la structure
             add_md5(hash_table,md5,chunk_index);//On ajoute le MD5 trouvé dans la table de hachage
             chunk_index++;//Incrémente l'index des chunks
+
+            if (verbose) {
+                printf("Chunk %d ajouté avec succès. \n", chunk_index);
+            }
         }else {
             //Le chunk existe déjà, ainsi pas besoin de le dupliquer
             printf("Chunk %d déjà sauvegardé avec l'index : %d \n",chunk_index,existing_index);
         }
     }
     //Fichier bien dupliqué
-    printf("Fichier dédupliqué avec succés. Nombre de chunks unique : %d\n",chunk_index);
+    if (verbose) {
+        printf("Fichier dédupliqué avec succés. Nombre de chunks unique : %d\n",chunk_index);
+    } else {
+        printf("Fichier dédupliqué.\n");
+    }
+
 }
 
 
@@ -109,6 +122,9 @@ void undeduplicate_file(FILE *file, Chunk **chunks, int *chunk_count) {
     *chunks = NULL;
     *chunk_count = 0;
 
+    if (verbose) {
+        printf("Début de la réstauration du fichier...\n");
+    }
     // Lecture du fichier dédupliqué
     while (fread(md5, 1, MD5_DIGEST_LENGTH, file) == MD5_DIGEST_LENGTH) {
         // Lecture des données du chunk
@@ -133,8 +149,16 @@ void undeduplicate_file(FILE *file, Chunk **chunks, int *chunk_count) {
         memcpy((*chunks)[*chunk_count].data, buffer, CHUNK_SIZE);
         memcpy((*chunks)[*chunk_count].md5, md5, MD5_DIGEST_LENGTH);
         (*chunk_count)++;
+
+        if (verbose) {
+            printf("Chunk restauré avec succès. Nombre actuel de chunks restaurés : %d\n", *chunk_count);
+        }
+    }
+    if (verbose){
+        printf("Restauration réussie. Nombre de chunks restaurés : %d\n", *chunk_count);
+    } else {
+        printf("Restauration réussie.\n");
     }
 
-    printf("Restauration réussie. Nombre de chunks restaurés : %d\n", *chunk_count);
 
 }

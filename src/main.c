@@ -11,7 +11,7 @@
 
 
 
-
+bool verbose = false;
 
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
@@ -31,7 +31,7 @@ void print_usage(const char *prog_name) {
 
 void handle_backup(const char *source, const char *dest, bool dry_run, bool verbose) {
     struct timeval start, end;
-    printf("Exécution d'une sauvegarde...\n");
+    if (verbose) printf("Debut de la sauvegarde de '%s' vers '%s' .\n", source, dest);
     if (dry_run) printf("Simulation activée.\n");
     if (verbose) gettimeofday(&start, NULL);
 
@@ -46,7 +46,7 @@ void handle_backup(const char *source, const char *dest, bool dry_run, bool verb
 
 void handle_restore(const char *source, const char *dest, bool dry_run, bool verbose) {
     struct timeval start, end;
-    printf("Restauration en cours...\n");
+    if (verbose) printf("Restauration en cours depuis '%s' vers '%s' .\n", source, dest);
     if (dry_run) printf("Simulation activée.\n");
     if (verbose) gettimeofday(&start, NULL);
 
