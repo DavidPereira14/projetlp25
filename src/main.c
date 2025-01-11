@@ -10,9 +10,6 @@
 #include <stdbool.h>
 
 
-
-bool verbose = false;
-
 void print_usage(const char *prog_name) {
     printf("Utilisation : %s [OPTIONS]\n", prog_name);
     printf("Options :\n");
