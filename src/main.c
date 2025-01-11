@@ -65,7 +65,9 @@ void handle_list_backups(const char *source) {
 }
 
 int main(int argc, char *argv[]) {
-    bool backup = false, restore = false, liste_backups = false, dry_run = false, verbose = false;
+    bool backup = false, restore = false, liste_backups = false;
+    dry_run = false;
+    verbose = false;
     const char *d_server = NULL, *s_server = NULL;
     const char *dest = NULL, *source = NULL;
     int d_port = 0, s_port = 0;
