@@ -158,7 +158,6 @@ int main(int argc, char *argv[]) {
             printf("Temps d'exécution : %f secondes\n", total_time);
         }
     } else if (liste_backups) {
-        printf("Liste des sauvegardes...\n");
         list_backups(source);
     } else {
         fprintf(stderr, "Erreur : Aucune action spécifiée.\n");
