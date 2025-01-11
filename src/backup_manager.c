@@ -93,6 +93,7 @@ long long calculer_taille_dossier(const char *chemin) {
 }
 
 void appel_write(char *file_path, FILE *logfile) {
+    printf("Appel_write\n");
     struct stat file_stat;
     if (stat(file_path, &file_stat) == -1) {
         perror("Erreur lors de la récupération des métadonnées36");

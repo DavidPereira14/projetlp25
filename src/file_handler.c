@@ -164,6 +164,8 @@ void update_backup_log(const char *logfile, log_t *logs) {
 }
 
 void write_log_element(log_element *elt, FILE *logfile) {
+    printf("Write_log_element\n");
+    printf("%s\n",logfile);
     if (!logfile || !elt) {
         fprintf(stderr, "Fichier ou log invalide.\n");
         return;
