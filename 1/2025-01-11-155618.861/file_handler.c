@@ -93,7 +93,7 @@ void update_backup_log(const char *logfile, log_t *logs) {
 
     // Parcours du fichier et stockage des lignes valides
     while (fgets(line, sizeof(line), file)) {
-        //printf("Ligne lue : %s", line);  // Afficher la ligne lue pour le débogage
+        printf("Ligne lue : %s", line);  // Afficher la ligne lue pour le débogage
 
         // Extraire le chemin du fichier de chaque ligne
         char *path_in_file = strtok(line, ";");
@@ -121,7 +121,7 @@ void update_backup_log(const char *logfile, log_t *logs) {
     // Afficher les lignes valides collectées
     printf("Nombre de lignes valides collectées : %d\n", line_count);
     for (int i = 0; i < line_count; i++) {
-        //printf("Ligne à écrire : %s \n", lines[i]);
+        printf("Ligne à écrire : %s \n", lines[i]);
     }
 
     // Ouvre à nouveau le fichier en mode écriture pour le réécrire sans les lignes obsolètes
@@ -153,7 +153,7 @@ void write_log_element(log_element *elt, FILE *logfile) {
     }
 
     // Afficher l'élément log avant d'écrire (pour débogage)
-    //printf("Écriture dans le fichier : %s/%s/%s\n", elt->path, elt->date, md5_str);
+    printf("Écriture dans le fichier : %s/%s/%s\n", elt->path, elt->date, md5_str);
 
     // Écrire l'élément dans le fichier et ajouter un saut de ligne
     fprintf(logfile, "%s;%s;%s\n", elt->path, elt->date, md5_str);
@@ -206,7 +206,7 @@ void copy_file(const char *src, const char *dest) {
         fwrite(buffer, 1, bytes_read, dest_f);
     }
 
-    //printf("Le fichier '%s' a été copié vers '%s'.\n", src, dest);
+    printf("Le fichier '%s' a été copié vers '%s'.\n", src, dest);
 
     fclose(src_f);  // Ferme le fichier source
     fclose(dest_f);  // Ferme le fichier destination

@@ -411,7 +411,7 @@ int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
         } else if (S_ISREG(src_stat.st_mode)) {
             if (stat(dest_path, &dest_stat) == -1 || src_stat.st_mtime > dest_stat.st_mtime) {
                 copy_file(src_path, dest_path);
-                backup_file(dest_path);
+                //backup_file(dest_path);
                 appel_write(dest_path, logfile);
             }
         }
@@ -488,6 +488,7 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     // Lecture de l'ancien backup_log
     log_t logs = read_backup_log(backup_log_path);
 
+
     // Appel de la fonction enregistrement pour faire le backup incrémental
     enregistrement(source_dir, backup_path,log_file);
 
@@ -530,65 +531,40 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
     printf("Fichier de sauvegarde créé : %s\n", output_filename);
 }
 
-// Fonction permettant de sauvegarder un fichier en appliquant la déduplication
+// Fonction implémentant la logique pour la sauvegarde d'un fichier
 void backup_file(const char *filename) {
-    // Ouvrir le fichier à sauvegarder en mode binaire
+    // Vérifier si le fichier source existe
+    if (!file_exists(filename)) {
+        printf("Le fichier %s n'existe pas.\n", filename);
+        return;
+    }
+
+    // Ouvrir le fichier source en mode binaire
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        perror("Erreur lors de l'ouverture du fichier");
+        perror("Erreur d'ouverture du fichier");
         return;
     }
 
-    // Initialiser la table de hachage pour les MD5 des chunks
-    Md5Entry hash_table[HASH_TABLE_SIZE] = {0};  // Table de hachage pour éviter les doublons
+    // Initialiser la table de hachage pour la déduplication et un tableau de chunks pour stocker les données dédupliquées
+    Md5Entry hash_table[HASH_TABLE_SIZE] = { 0 };
+    Chunk chunks[100];  // Tableau pour stocker les chunks
 
-    // Initialiser un tableau de chunks
-    Chunk *chunks = malloc(sizeof(Chunk) * CHUNK_SIZE);
-    if (chunks == NULL) {
-        perror("Erreur d'allocation mémoire pour les chunks");
-        fclose(file);
-        return;
-    }    int chunk_count = 0;
+    // Dédupliquer le fichier en le divisant en chunks et en évitant les doublons
+    unsigned char buffer[CHUNK_SIZE];
+    size_t bytes_read;
+    unsigned char md5[MD5_DIGEST_LENGTH];
 
-    // Dédupliquer le fichier et le découper en chunks
-    deduplicate_file(file, chunks, hash_table);
+    // Appeler la fonction deduplicate_file pour découper le fichier en chunks et éviter les doublons
+    deduplicate_file((FILE *) filename, chunks, hash_table);
 
-    // Fermer le fichier après la lecture
+    // Après la déduplication, enregistrer les chunks dans un fichier de sauvegarde
+    write_backup_file("backup_file.bin", chunks, 100);  // Enregistrer les chunks uniques dans un fichier
+
+    // Fermer le fichier source
     fclose(file);
 
-    // Si aucun chunk n'a été trouvé, afficher une erreur et arrêter la sauvegarde
-    if (chunk_count == 0) {
-        fprintf(stderr, "Aucun chunk à sauvegarder pour '%s'.\n", filename);
-        free(chunks);
-        return;
-    }
-
-    // Ouvrir ou créer le fichier de sauvegarde
-    FILE *backup_file = fopen("backup_data.dat", "ab");  // Ouvrir en mode append (ajout)
-    if (!backup_file) {
-        perror("Erreur lors de l'ouverture du fichier de sauvegarde");
-        free(chunks);
-        return;
-    }
-
-    // Écrire les chunks dans le fichier de sauvegarde
-    for (int i = 0; i < chunk_count; i++) {
-        // Écrire le MD5 du chunk dans le fichier de sauvegarde
-        fwrite(chunks[i].md5, 1, MD5_DIGEST_LENGTH, backup_file);
-
-        // Écrire les données du chunk dans le fichier de sauvegarde
-        fwrite(chunks[i].data, 1, CHUNK_SIZE, backup_file);
-    }
-
-    // Fermer le fichier de sauvegarde après l'écriture
-    fclose(backup_file);
-    printf("Sauvegarde de '%s' terminée avec succès.\n", filename);
-
-    // Libérer la mémoire des chunks
-    for (int i = 0; i < chunk_count; i++) {
-        free(chunks[i].data);
-    }
-    free(chunks);
+    printf("Sauvegarde du fichier effectuée.\n");
 }
 
 // Fonction pour restaurer un fichier à partir des chunks dédupliqués
