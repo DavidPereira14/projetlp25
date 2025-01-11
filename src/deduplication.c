@@ -88,7 +88,7 @@ void deduplicate_file(FILE *file, Chunk *chunks, Md5Entry *hash_table) {
         }
     }
     //Fichier bien dupliqué
-    printf("Fichier dédupliqué avec succés. Nombre de chunks unique : %d",chunk_index);
+    printf("Fichier dédupliqué avec succés. Nombre de chunks unique : %d\n",chunk_index);
 }
 
 

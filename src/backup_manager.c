@@ -13,36 +13,8 @@
 
 #define MAX_PATH 1024  // Définir MAX_PATH comme 1024 caractère
 
-// Fonction pour afficher un élément de log
-void print_log_element(log_element *entry) {
 
-    if (entry == NULL) {
-        printf("L'élément de log est NULL\n");
-        return;
-    }
 
-    // Afficher les informations de l'élément
-    printf("Chemin: %s\n", entry->path);
-
-    // Affichage du MD5
-    printf("MD5: ");
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        printf("%02x", entry->md5[i]);
-    }
-    printf("\n");
-
-    // Afficher la date
-    printf("Date de modification: %s\n", entry->date);
-}
-
-// Fonction pour afficher la liste de tous les éléments de log
-void print_log_list(log_element *head) {
-    log_element *current = head;
-    while (current != NULL) {
-        print_log_element(current);
-        current = current->next;
-    }
-}
 
 int creer_repertoire(const char *chemin) {
     if (mkdir(chemin, 0755) == 0) {
@@ -369,6 +341,7 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
 }
 
 int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
+    printf("Enregistrement \n");
     DIR *src = opendir(src_dir);
     if (!src) {
         perror("Erreur lors de l'ouverture du répertoire source");
@@ -445,6 +418,7 @@ int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
 
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
+    printf("create_backup");
     if (check_directory(source_dir) == -1) {
         printf("Erreur : vérifier le répertoire source (existence, permission)\n");
         return;
@@ -502,6 +476,7 @@ void create_backup(const char *source_dir, const char *backup_dir) {
 
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
+    printf("Write_backup_file");
     FILE *output_file = fopen(output_filename, "wb");  // Ouvrir le fichier de sortie en mode binaire
     if (!output_file) {
         perror("Erreur d'ouverture du fichier de sauvegarde");
@@ -532,6 +507,8 @@ void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_cou
 
 // Fonction permettant de sauvegarder un fichier en appliquant la déduplication
 void backup_file(const char *filename) {
+    printf("Backup_file\n");
+
     // Ouvrir le fichier à sauvegarder en mode binaire
     FILE *file = fopen(filename, "rb");
     if (!file) {
@@ -542,58 +519,47 @@ void backup_file(const char *filename) {
     // Initialiser la table de hachage pour les MD5 des chunks
     Md5Entry hash_table[HASH_TABLE_SIZE] = {0};  // Table de hachage pour éviter les doublons
 
-    // Initialiser un tableau de chunks
+    // Allouer un tableau dynamique pour les chunks (vérifier le nombre d'éléments)
     Chunk *chunks = malloc(sizeof(Chunk) * CHUNK_SIZE);
     if (chunks == NULL) {
         perror("Erreur d'allocation mémoire pour les chunks");
         fclose(file);
         return;
-    }    int chunk_count = 0;
+    }
+
+    int chunk_count = 0;
 
     // Dédupliquer le fichier et le découper en chunks
-    deduplicate_file(file, chunks, hash_table);
-
-    // Fermer le fichier après la lecture
-    fclose(file);
+    deduplicate_file(file, chunks, &chunk_count);
 
     // Si aucun chunk n'a été trouvé, afficher une erreur et arrêter la sauvegarde
     if (chunk_count == 0) {
         fprintf(stderr, "Aucun chunk à sauvegarder pour '%s'.\n", filename);
         free(chunks);
+        fclose(file);
         return;
     }
 
-    // Ouvrir ou créer le fichier de sauvegarde
-    FILE *backup_file = fopen("backup_data.dat", "ab");  // Ouvrir en mode append (ajout)
-    if (!backup_file) {
-        perror("Erreur lors de l'ouverture du fichier de sauvegarde");
-        free(chunks);
-        return;
-    }
+    // Fermer le fichier après la lecture
+    fclose(file);
 
-    // Écrire les chunks dans le fichier de sauvegarde
-    for (int i = 0; i < chunk_count; i++) {
-        // Écrire le MD5 du chunk dans le fichier de sauvegarde
-        fwrite(chunks[i].md5, 1, MD5_DIGEST_LENGTH, backup_file);
-
-        // Écrire les données du chunk dans le fichier de sauvegarde
-        fwrite(chunks[i].data, 1, CHUNK_SIZE, backup_file);
-    }
-
-    // Fermer le fichier de sauvegarde après l'écriture
-    fclose(backup_file);
-    printf("Sauvegarde de '%s' terminée avec succès.\n", filename);
+    // Appeler la fonction pour écrire les chunks dans un fichier de sauvegarde
+    char backup_filename[MAX_PATH];
+    snprintf(backup_filename, sizeof(backup_filename), "backup/%s_backup.dat", filename);
+    write_backup_file(backup_filename, chunks, chunk_count);
 
     // Libérer la mémoire des chunks
     for (int i = 0; i < chunk_count; i++) {
-        free(chunks[i].data);
+        free(chunks[i].data);  // Assurez-vous de libérer correctement la mémoire de chaque chunk
     }
     free(chunks);
+
+    printf("Sauvegarde de '%s' terminée avec succès.\n", filename);
 }
 
 // Fonction pour restaurer un fichier à partir des chunks dédupliqués
 int write_restored_files(const char *output_filename, Chunk *chunks, int chunk_count) {
-    printf("write_restored_files \n\n");
+    printf("Write_restored_files \n\n");
     // Ouvrir le fichier de sortie en mode binaire
     FILE *output_file = fopen(output_filename, "wb");
     if (!output_file) {
@@ -626,22 +592,21 @@ int write_restored_files(const char *output_filename, Chunk *chunks, int chunk_c
     return 0;
 }
 
-// Fonction pour restaurer une sauvegarde
 void restore_backup(const char *backup_id, const char *restore_dir) {
     /*
      * @param: backup_id est le chemin vers le fichier de sauvegarde .backup_log
      *         restore_dir est le répertoire où les fichiers seront restaurés
      */
     printf("Restore_backup \n\n");
-     // Lire les logs depuis le fichier
+
+    // Lire les logs depuis le fichier
     log_t logs = read_backup_log(backup_id);
 
     log_element *current = logs.head;  // Accéder au premier élément de la liste de logs
 
-    printf("%s",current->path);
-
-    if (current == NULL){
+    if (current == NULL) {
         printf("Current est vide\n");
+        return;  // Sortir si la liste de logs est vide
     }
 
     while (current != NULL) {
@@ -713,7 +678,7 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     }
 
     // Mettre à jour le fichier .backup_log après la restauration
-    update_backup_log(backup_id, current);
+    update_backup_log(backup_id, &logs);
 }
 
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
