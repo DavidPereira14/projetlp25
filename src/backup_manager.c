@@ -13,10 +13,8 @@
 #include <stdbool.h>
 
 #define MAX_PATH 1024  // Définir MAX_PATH comme 1024 caractère
-extern bool verbose;
-
-
-
+bool verbose;
+bool dry_run=true;
 
 
 int creer_repertoire(const char *chemin) {
@@ -293,9 +291,6 @@ char *find_last_backup(const char *dest_dir) {
     return last_backup;
 }
 
-
-
-
 void copie_backup(const char *backup_id, const char *restore_dir) {
     DIR *src;
     struct dirent *entry;
@@ -306,6 +301,7 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
         perror("Erreur lors de l'ouverture du répertoire source");
         return;
     }
+
 
     // Parcourir les fichiers et répertoires
     while ((entry = readdir(src)) != NULL) {
@@ -320,7 +316,12 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
 
         // copier le fichier spécifique ".backup_log"
         if (strcmp(entry->d_name, ".backup_log") == 0) {
-            copy_file(src_path,dest_path);
+            if(dry_run){
+                printf("copie du fichier %s vers %s\n",src_path,dest_path);
+            }
+            else{
+                copy_file(src_path,dest_path);
+            }
             continue;
         }
 
@@ -331,12 +332,22 @@ void copie_backup(const char *backup_id, const char *restore_dir) {
 
         if (S_ISDIR(src_stat.st_mode)) {
             // Créer le sous-répertoire dans la destination
-            mkdir(dest_path,0755);
+            if(dry_run){
+                printf("creation du repertoire %s\n",dest_path);
+            }
+            else{
+                mkdir(dest_path,0755);
+            }
             copie_backup(src_path, dest_path);
         } else {
-            // Créer un lien dur vers le fichier source
-            if (link(src_path, dest_path) == -1) {
-                perror("Erreur lors de la création d'un lien dur");
+            if(dry_run){
+                printf("creation du lien dur de %s vers %s\n",src_path,dest_path);
+            }
+            else {
+                // Créer un lien dur vers le fichier source
+                if (link(src_path, dest_path) == -1) {
+                    perror("Erreur lors de la création d'un lien dur\n");
+                }
             }
         }
     }
@@ -421,13 +432,12 @@ int enregistrement(const char *src_dir, const char *dest_dir,FILE *logfile) {
 
 // Fonction pour créer une nouvelle sauvegarde complète puis incrémentale
 void create_backup(const char *source_dir, const char *backup_dir) {
+    FILE *log_file;
     printf("create_backup");
-    if (verbose) printf("Vérification du répertoire source '%s' .\n",source_dir);
     if (check_directory(source_dir) == -1) {
         printf("Erreur : vérifier le répertoire source (existence, permission)\n");
         return;
     }
-    if (verbose) printf("Vérification du répertoire de sauvegarde '%s'.\n", backup_dir);
     if (check_directory(backup_dir) == -1) {
         printf("Erreur : vérifier le répertoire backup (existence, permission)\n");
         return;
@@ -444,17 +454,26 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     // Création du fichier .backup_log
     char backup_log_path[1024];
     snprintf(backup_log_path, sizeof(backup_log_path), "%s/.backup_log", backup_path);
-
-    mkdir(backup_path, 0755);
-
-    FILE *log_file = fopen(backup_log_path, "w");
-    if (!log_file) {
-        perror("Erreur lors de la création du fichier .backup_log");
-        return;
+    if (dry_run){
+        printf("creation du repertoire %s dans le repertoire %s\n",timestamp,backup_dir);
+        printf("creation du fichier .backup_log dans le repertoire %s\n",backup_path);
+    }else{
+        mkdir(backup_path, 0755);
+        log_file = fopen(backup_log_path, "w");
+        if (!log_file) {
+            perror("Erreur lors de la création du fichier .backup_log");
+            return;
+        }
     }
-
     char *last_backup_name = find_last_backup(backup_dir);
-
+    if(dry_run){
+        if (last_backup_name) {
+            printf("la derniere backup enregistre est %s\n", last_backup_name);
+        }
+        else{
+            printf("il n'y a pas de derniere backup");
+        }
+    }
     if (last_backup_name) {
         // Sauvegarde incrémentale
         char last_backup_path[1024];
@@ -463,22 +482,23 @@ void create_backup(const char *source_dir, const char *backup_dir) {
         copie_backup(last_backup_path, backup_path);
         free(last_backup_name);
     }
+    if(dry_run){
+        printf("lecture du backup_log\n");
+        printf("appel de la fonction enregistrement qui copie les fichier du dossier source vers dest\n");
+        printf("appel de la fonction update_backup_log qui met a jour le fichier backup_log\n");
+    }else {
+        // Lecture de l'ancien backup_log
+        log_t logs = read_backup_log(backup_log_path);
 
-    // Lecture de l'ancien backup_log
-    log_t logs = read_backup_log(backup_log_path);
+        // Appel de la fonction enregistrement pour faire le backup incrémental
+        enregistrement(source_dir, backup_path, log_file);
 
-    // Appel de la fonction enregistrement pour faire le backup incrémental
-    enregistrement(source_dir, backup_path,log_file);
+        fclose(log_file);
 
-    fclose(log_file);
-
-    // Mettre à jour le fichier .backup_log
-    update_backup_log(backup_log_path, &logs);
-
-    if (verbose) printf("Sauvegarde terminée avec succès dans '%s'.\n", backup_dir);
+        // Mettre à jour le fichier .backup_log
+        update_backup_log(backup_log_path, &logs);
+    }
 }
-
-
 
 
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
