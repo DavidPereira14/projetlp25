@@ -6,6 +6,9 @@
 #define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/md5.h>
 #include <dirent.h>
+#include <stdbool.h>
+
+extern bool verbose;
 
 // Fonction de hachage MD5 pour l'indexation
 // dans la table de hachage

@@ -3,8 +3,11 @@
 #include <string.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <stdbool.h>
 #include "file_handler.h"
 #include "deduplication.h"
+
+extern bool verbose;
 
 // Fonction pour lire le fichier de log de sauvegarde
 log_t read_backup_log(const char *logfile) {
@@ -15,6 +18,9 @@ log_t read_backup_log(const char *logfile) {
     if (!file) {
         perror("Erreur lors de l'ouverture du fichier de sauvegarde");
         return logs;  // Retourne une liste vide en cas d'erreur
+    }
+    if (verbose){
+        printf("Lecture du fichier: %s\n", logfile);
     }
 
     char line[1024];  // Buffer pour lire chaque ligne
@@ -72,6 +78,10 @@ log_t read_backup_log(const char *logfile) {
             logs.head = new_log;  // Si la liste est vide, cet élément devient la tête
         }
         logs.tail = new_log;  // Ce nouvel élément devient la queue de la liste
+    }
+
+    if (verbose){
+        printf("Fichier %s lu avec succes.\n", logfile);
     }
 
     fclose(file);  // Fermer le fichier après lecture

@@ -10,8 +10,11 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #define MAX_PATH 1024  // Définir MAX_PATH comme 1024 caractère
+extern bool verbose;
+
 
 
 
@@ -605,7 +608,9 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
     log_element *current = logs.head;  // Accéder au premier élément de la liste de logs
 
     if (current == NULL) {
-        printf("Current est vide\n");
+        if (verbose) {
+            printf("Aucun element dans le log de sauvegarde.\n");
+        }
         return;  // Sortir si la liste de logs est vide
     }
 
@@ -623,7 +628,9 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
             time_t backup_time = mktime(&tm_info);
 
             if (file_stat.st_mtime >= backup_time) {
-                printf("Fichier '%s' déjà à jour, restauration ignorée.\n", current->path);
+                if (verbose) {
+                    printf("Fichier '%s' déjà à jour, restauration ignorée.\n", current->path);
+                }
                 current = current->next;  // Passer à l'élément suivant de la liste
                 continue;
             }
@@ -644,7 +651,9 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         fclose(backup_file);
 
         if (chunk_count == 0) {
-            fprintf(stderr, "Aucun chunk à restaurer pour '%s'.\n", current->path);
+            if (verbose) {
+                printf("Aucun chunk à restaurer pour '%s'.\n", current->path);
+            }
             current = current->next;  // Passer à l'élément suivant de la liste
             continue;
         }
@@ -666,7 +675,9 @@ void restore_backup(const char *backup_id, const char *restore_dir) {
         // Restaurer le fichier depuis les chunks
         int write = write_restored_files(restored_file_path, chunks, chunk_count);
         if (write == 0) {
-            printf("Fichier '%s' restauré avec succès.\n", current->path);
+            if (verbose){
+                printf("Fichier '%s' restauré avec succès.\n", current->path);
+            }
         } else {
             fprintf(stderr, "Échec de la restauration de '%s'.\n", current->path);
         }
@@ -694,7 +705,10 @@ void list_backups(const char *backup_dir){
         return;
     }
 
-    printf("Liste des sauvegardes dans %s:\n", backup_dir);
+    if (verbose) {
+        printf("Liste des sauvegardes dans %s:\n", backup_dir);
+    }
+
 
     // Parcourir les fichiers et dossiers
     while ((entry = readdir(dir)) != NULL) {
@@ -716,7 +730,9 @@ void list_backups(const char *backup_dir){
         if (S_ISDIR(file_stat.st_mode)) {
             long long taille = calculer_taille_dossier(full_path);
             if (taille == -1) {
-                fprintf(stderr, "Erreur lors du calcul de la taille du dossier.\n");
+                if (verbose) {
+                    printf("Erreur lors du calcul de la taille du dossier %s.\n", full_path);
+                }
                 continue;
             }
             printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
