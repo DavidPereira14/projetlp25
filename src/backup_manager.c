@@ -730,8 +730,16 @@ void list_backups(const char *backup_dir){
         perror("Erreur lors de l'ouverture du répertoire");
         return;
     }
-
-    printf("Liste des sauvegardes dans %s:\n", backup_dir);
+    if(verbose){
+        char absolute_path[PATH_MAX];               // Buffer pour le chemin absolu
+        if (!realpath(backup_dir, absolute_path) != NULL) {
+            perror("Erreur lors de la résolution du chemin");
+        }
+        printf("Liste des sauvegardes dans %s:\n", absolute_path);
+    }
+    else{
+        printf("Liste des sauvegardes dans %s:\n", backup_dir);
+    }
 
     // Parcourir les fichiers et dossiers
     while ((entry = readdir(dir)) != NULL) {
@@ -756,17 +764,7 @@ void list_backups(const char *backup_dir){
                 fprintf(stderr, "Erreur lors du calcul de la taille du dossier.\n");
                 continue;
             }
-            if(verbose){
-                char absolute_path[PATH_MAX];               // Buffer pour le chemin absolu
-
-                if (!realpath(full_path, absolute_path) != NULL) {
-                    perror("Erreur lors de la résolution du chemin");
-                }
-                printf("- %s taille de l'enregistrement : %lld octets\n", absolute_path,taille);
-            }
-            else{
-                printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
-            }
+            printf("- %s taille de l'enregistrement : %lld octets\n", entry->d_name,taille);
         }
     }
 
