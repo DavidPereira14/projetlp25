@@ -7,8 +7,6 @@
 #include "file_handler.h"
 #include "deduplication.h"
 
-extern bool verbose;
-
 // Fonction permettant de lire un élément du fichier .backup_log
 log_t read_backup_log(const char *logfile){
     /* Implémenter la logique pour la lecture d'une ligne du fichier ".backup_log"
