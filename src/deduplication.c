@@ -8,8 +8,6 @@
 #include <dirent.h>
 #include <stdbool.h>
 
-extern bool verbose;
-
 // Fonction de hachage MD5 pour l'indexation
 // dans la table de hachage
 unsigned int hash_md5(unsigned char *md5) {
