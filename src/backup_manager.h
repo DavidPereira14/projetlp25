@@ -9,6 +9,8 @@
 #include <dirent.h>
 #include <time.h>
 #include <sys/stat.h>
+extern bool verbose;
+extern bool dry_run;
 
 // Fonction pour créer un nouveau backup incrémental
 void create_backup(const char *source_dir, const char *backup_dir);
