@@ -14,7 +14,7 @@
 
 #define MAX_PATH 1024  // Définir MAX_PATH comme 1024 caractère
 bool verbose;
-bool dry_run=true;
+bool dry_run;
 
 
 int creer_repertoire(const char *chemin) {
@@ -94,7 +94,6 @@ long long calculer_taille_dossier(const char *chemin) {
 }
 
 void appel_write(char *file_path, FILE *logfile) {
-    printf("Appel_write\n");
     struct stat file_stat;
     if (stat(file_path, &file_stat) == -1) {
         perror("Erreur lors de la récupération des métadonnées36");
@@ -501,9 +500,6 @@ void create_backup(const char *source_dir, const char *backup_dir) {
     }
 }
 
-
-
-
 // Fonction permettant d'enregistrer dans un fichier le tableau de chunks dédupliqué
 void write_backup_file(const char *output_filename, Chunk *chunks, int chunk_count) {
     printf("Write_backup_file");
@@ -623,100 +619,72 @@ int write_restored_files(const char *output_filename, Chunk *chunks, int chunk_c
 }
 
 void restore_backup(const char *backup_id, const char *restore_dir) {
-    /*
-     * @param: backup_id est le chemin vers le fichier de sauvegarde .backup_log
-     *         restore_dir est le répertoire où les fichiers seront restaurés
-     */
-    printf("Restore_backup \n\n");
+    printf("Restore_backup\n\n");
 
-    // Lire les logs depuis le fichier
-    log_t logs = read_backup_log(backup_id);
-
-    log_element *current = logs.head;  // Accéder au premier élément de la liste de logs
-
-    if (current == NULL) {
-        if (verbose) {
-            printf("Aucun element dans le log de sauvegarde.\n");
-        }
-        return;  // Sortir si la liste de logs est vide
+    char backup_log_path[MAX_PATH];
+    if (snprintf(backup_log_path, sizeof(backup_log_path), "%s/.backup_log", backup_id) >= sizeof(backup_log_path)) {
+        fprintf(stderr, "Erreur : chemin de log trop long.\n");
+        return;
     }
 
+    log_t logs = read_backup_log(backup_log_path);
+    log_element *current = logs.head;
+
+    if (current == NULL) {
+        printf("Aucun élément dans le log de sauvegarde.\n");
+        return;
+    }
+    mkdir(restore_dir,0755);
     while (current != NULL) {
-        // Construire le chemin complet du fichier restauré
-        char restored_file_path[MAX_PATH];
-        snprintf(restored_file_path, sizeof(restored_file_path), "%s/%s", restore_dir, current->path);
+        char backup_file_path[MAX_PATH];
 
-        // Vérifier si le fichier existe déjà et s'il doit être restauré
-        struct stat file_stat;
-        if (stat(restored_file_path, &file_stat) == 0) {
-            // Comparer la date de dernière modification (timestamp) avec la sauvegarde
-            struct tm tm_info;
-            strptime(current->date, "%Y-%m-%d %H:%M:%S", &tm_info);
-            time_t backup_time = mktime(&tm_info);
-
-            if (file_stat.st_mtime >= backup_time) {
-                if (verbose) {
-                    printf("Fichier '%s' déjà à jour, restauration ignorée.\n", current->path);
-                }
-                current = current->next;  // Passer à l'élément suivant de la liste
+        // Si le chemin de `current->path` est déjà absolu ou contient `backup_id`, ne pas préfixer
+        if (strncmp(current->path, backup_id, strlen(backup_id)) == 0) {
+            strncpy(backup_file_path, current->path, sizeof(backup_file_path));
+        } else {
+            if (snprintf(backup_file_path, sizeof(backup_file_path), "%s/%s", backup_id, current->path) >= sizeof(backup_file_path)) {
+                fprintf(stderr, "Erreur : chemin de fichier trop long pour '%s'.\n", current->path);
+                current = current->next;
                 continue;
             }
         }
 
-        // Ouvrir le fichier de sauvegarde correspondant
-        FILE *backup_file = fopen(current->path, "rb");
+        printf("Tentative d'ouverture du fichier : %s\n", backup_file_path);
+        FILE *backup_file = fopen(backup_file_path, "rb");
         if (!backup_file) {
-            perror("Erreur lors de l'ouverture du fichier de sauvegarde");
-            current = current->next;  // Passer à l'élément suivant de la liste
+            fprintf(stderr, "Erreur lors de l'ouverture du fichier de sauvegarde '%s': %s\n", backup_file_path, strerror(errno));
+            current = current->next;
             continue;
         }
 
-        // Charger les chunks à partir du fichier sauvegardé
+        // Récupération et traitement des chunks
         Chunk *chunks = NULL;
         int chunk_count = 0;
+        printf("unde\n");
         undeduplicate_file(backup_file, &chunks, &chunk_count);
         fclose(backup_file);
 
         if (chunk_count == 0) {
-            if (verbose) {
-                printf("Aucun chunk à restaurer pour '%s'.\n", current->path);
-            }
-            current = current->next;  // Passer à l'élément suivant de la liste
+            current = current->next;
             continue;
         }
+        char *last_slash = strrchr(current->path, '/');
+        // Création du répertoire cible
+        char restored_file_path[MAX_PATH];
+        snprintf(restored_file_path, sizeof(restored_file_path), "%s%s", restore_dir, last_slash);
+        printf("%s\n",restored_file_path);
 
-        // Créer le répertoire de destination s'il n'existe pas
-        char dir_path[MAX_PATH];
-        strncpy(dir_path, restored_file_path, sizeof(dir_path));
-        char *last_slash = strrchr(dir_path, '/');
-        if (last_slash) {
-            *last_slash = '\0';
-            if (mkdir(dir_path, 0755) != 0 && errno != EEXIST) {
-                perror("Erreur lors de la création du répertoire de restauration");
-                free(chunks);
-                current = current->next;  // Passer à l'élément suivant de la liste
-                continue;
-            }
-        }
-
-        // Restaurer le fichier depuis les chunks
-        int write = write_restored_files(restored_file_path, chunks, chunk_count);
-        if (write == 0) {
-            if (verbose){
-                printf("Fichier '%s' restauré avec succès.\n", current->path);
-            }
-        } else {
+        fopen(restored_file_path,"w");
+        // Écriture du fichier restauré
+        if (write_restored_files(restored_file_path, chunks, chunk_count) != 0) {
             fprintf(stderr, "Échec de la restauration de '%s'.\n", current->path);
         }
 
         free(chunks);
-
-        // Passer à l'élément suivant dans la liste chaînée
         current = current->next;
     }
 
-    // Mettre à jour le fichier .backup_log après la restauration
-    update_backup_log(backup_id, &logs);
+    update_backup_log(backup_log_path, &logs);
 }
 
 // Fonction permettant de lister les différentes sauvegardes présentes dans la destination
