@@ -1,1 +1,0 @@
-./lp25_borgbackup --restore --source test_back/2025-01-12-00:10:18.138 --dest test_back/rest
